@@ -69,4 +69,5 @@ set(CS225A_COMMON_LIBRARIES
 set (CS225A_BINARY_DIR                  ${PROJECT_SOURCE_DIR}/bin)
 
 add_subdirectory(lecture2_demo)
+add_subdirectory(hw0)
 
