@@ -1,5 +1,3 @@
-// example visulaization program
-
 #include <GL/glew.h>
 #include "Sai2Model.h"
 #include "Sai2Graphics.h"
@@ -7,13 +5,13 @@
 #include <dynamics3d.h>
 #include "redis/RedisClient.h"
 #include "timer/LoopTimer.h"
-
-#include <GLFW/glfw3.h> //must be loaded after loading opengl/glew
-
-#include "uiforce/UIForceWidget.h"
-#include <random>
-
+#include <GLFW/glfw3.h>  // must be loaded after loading opengl/glew
+#include "uiforce/UIForceWidget.h"  // used for right-click drag interaction in window 
+#include <random>  // used for white-noise generation
+#include "force_sensor/ForceSensorSim.h"  // references src folder in root directory 
+#include "force_sensor/ForceSensorDisplay.h"
 #include <signal.h>
+
 bool fSimulationRunning = false;
 void sighandler(int){fSimulationRunning = false;}
 
@@ -27,6 +25,7 @@ const string obj_file = "./resources/cup.urdf";
 const string robot_name = "panda_collision";
 const string obj_name = "cup"; 
 const string camera_name = "camera_fixed";
+const string ee_link_name = "link7";
 
 RedisClient redis_client;
 
@@ -40,8 +39,16 @@ const std::string CAMERA_POS_KEY = "cs225a::camera::pos";
 const std::string CAMERA_ORI_KEY = "cs225a::camera::ori";
 const std::string CAMERA_DETECT_KEY = "cs225a::camera::detect";
 const std::string CAMERA_OBJ_POS_KEY = "cs225a::camera::obj_pos";
+const std::string EE_FORCE_KEY = "cs225a::sensor::force";
+const std::string EE_MOMENT_KEY = "cs225a::sensor::moment";
 // - read:
 const std::string JOINT_TORQUES_COMMANDED_KEY  = "cs225a::robot::panda::actuators::fgc";
+
+// force sensor
+ForceSensorSim* force_sensor;
+
+// display widget for forces at end effector
+ForceSensorDisplay* force_display;
 
 // simulation thread
 void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simulation::Sai2Simulation* sim, UIForceWidget *ui_force_widget);
@@ -90,6 +97,7 @@ int main() {
 	auto graphics = new Sai2Graphics::Sai2Graphics(world_file, true);
 	Eigen::Vector3d camera_pos, camera_lookat, camera_vertical;
 	graphics->getCameraPose(camera_name, camera_pos, camera_vertical, camera_lookat);
+	graphics->showLinkFrame(true, robot_name, ee_link_name, 0.15);  // can add frames for different links
 
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
@@ -109,13 +117,17 @@ int main() {
 
     // set co-efficient of restition to zero for force control
     // see issue: https://github.com/manips-sai/sai2-simulation/issues/1
-    sim->setCollisionRestitution(0.3);
+    sim->setCollisionRestitution(0.0);
 
     // set co-efficient of friction also to zero for now as this causes jitter
     // sim->setCoeffFrictionStatic(0.0);
     // sim->setCoeffFrictionDynamic(0.0);
     sim->setCoeffFrictionStatic(0.5);
     sim->setCoeffFrictionDynamic(0.5);
+
+	// initialize force sensor: needs Sai2Simulation sim interface type
+	force_sensor = new ForceSensorSim(robot_name, ee_link_name, Eigen::Affine3d::Identity(), sim, robot);
+	force_display = new ForceSensorDisplay(force_sensor, graphics);
 
 	/*------- Set up visualization -------*/
 	// set up error callback
@@ -155,6 +167,7 @@ int main() {
 	// cache variables
 	double last_cursorx, last_cursory;
 
+	// init redis client values 
 	redis_client.setEigenMatrixJSON(JOINT_ANGLES_KEY, robot->_q); 
 	redis_client.setEigenMatrixJSON(JOINT_VELOCITIES_KEY, robot->_dq); 
 	redis_client.setEigenMatrixJSON(OBJ_JOINT_ANGLES_KEY, object->_q); 
@@ -174,6 +187,7 @@ int main() {
 		glfwGetFramebufferSize(window, &width, &height);
 		graphics->updateGraphics(robot_name, robot);
 		graphics->updateGraphics(obj_name, object);
+		force_display->update();
 		graphics->render(camera_name, width, height);
 
 		// swap buffers
@@ -312,11 +326,16 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simul
 	Eigen::VectorXd ui_force_command_torques;
 	ui_force_command_torques.setZero();
 
+	// sensed forces and moments from sensor
+	Eigen::Vector3d sensed_force;
+    Eigen::Vector3d sensed_moment;
+
+	// manual object offset since the offset in world.urdf file since positionInWorld() doesn't account for this 
 	Vector3d obj_offset;
 	obj_offset << 0, -0.35, 0.544;
 	Vector3d robot_offset;
-	robot_offset << 0.0, 0.3, 0.0;
-	double kvj = 10;
+	robot_offset << 0.0, 0.3, 0.0;	
+	double kvj = 10;  // velocity damping for ui force drag 
 
 	// init camera detection variables 
 	Vector3d camera_pos, obj_pos;
@@ -326,7 +345,7 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simul
 	const std::string false_message = "Not Detected";
 
 	// setup redis client data container for pipeset (batch write)
-	std::vector<std::pair<std::string, std::string>> redis_data(8);  // set with the number of keys to write 
+	std::vector<std::pair<std::string, std::string>> redis_data(10);  // set with the number of keys to write 
 
 	// setup white noise generator
     const double mean = 0.0;
@@ -344,6 +363,7 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simul
 		// read arm torques from redis and apply to simulated robot
 		command_torques = redis_client.getEigenMatrixJSON(JOINT_TORQUES_COMMANDED_KEY);
 
+		// get forces from interactive screen 
 		ui_force_widget->getUIForce(ui_force);
 		ui_force_widget->getUIJointTorques(ui_force_command_torques);
 
@@ -366,6 +386,12 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simul
 		sim->getJointVelocities(obj_name, object->_dq);
 		object->updateModel();
 
+		// update force sensor readings
+		force_sensor->update();
+		force_sensor->getForce(sensed_force);
+        force_sensor->getMoment(sensed_moment);
+
+        // query object position and ee pos/ori for camera detection 
 		object->positionInWorld(obj_pos, "link6");
 		robot->positionInWorld(camera_pos, "link7");
 		robot->rotationInWorld(camera_ori, "link7");  // local to world frame 
@@ -396,6 +422,8 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simul
 		redis_data.at(5) = std::pair<string, string>(OBJ_JOINT_VELOCITIES_KEY, redis_client.encodeEigenMatrixJSON(object->_dq));
 		redis_data.at(6) = std::pair<string, string>(CAMERA_POS_KEY, redis_client.encodeEigenMatrixJSON(camera_pos));
 		redis_data.at(7) = std::pair<string, string>(CAMERA_ORI_KEY, redis_client.encodeEigenMatrixJSON(camera_ori));
+		redis_data.at(8) = std::pair<string, string>(EE_FORCE_KEY, redis_client.encodeEigenMatrixJSON(sensed_force));
+		redis_data.at(9) = std::pair<string, string>(EE_MOMENT_KEY, redis_client.encodeEigenMatrixJSON(sensed_moment));
 
 		redis_client.pipeset(redis_data);
 

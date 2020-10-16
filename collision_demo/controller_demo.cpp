@@ -58,6 +58,7 @@ int main() {
 	robot->updateModel();
 
 	// prepare controller
+	// note: please use sai2-primitive functions - explicit control law shown here for clarity
 	int dof = robot->dof();
 	const string link_name = "link7";
 	const Vector3d pos_in_link = Vector3d(0, 0, 0.15);
@@ -126,6 +127,8 @@ int main() {
 
 		MatrixXd Lambda0(6, 6);
 		robot->taskInertiaMatrix(Lambda0, J);
+
+		// note: please use sai2-primitive functions - explicit control law shown here for clarity
 
 		double kp = 25;
 		double kv = 10;
