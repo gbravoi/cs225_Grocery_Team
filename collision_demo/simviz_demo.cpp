@@ -8,7 +8,7 @@
 #include <GLFW/glfw3.h>  // must be loaded after loading opengl/glew
 #include "uiforce/UIForceWidget.h"  // used for right-click drag interaction in window 
 #include <random>  // used for white-noise generation
-#include "force_sensor/ForceSensorSim.h"  // references src folder in root directory 
+#include "force_sensor/ForceSensorSim.h"  // references src folder in sai2-common directory 
 #include "force_sensor/ForceSensorDisplay.h"
 #include <signal.h>
 
@@ -126,7 +126,7 @@ int main() {
     sim->setCoeffFrictionDynamic(0.5);
 
 	// initialize force sensor: needs Sai2Simulation sim interface type
-	force_sensor = new ForceSensorSim(robot_name, ee_link_name, Eigen::Affine3d::Identity(), sim, robot);
+	force_sensor = new ForceSensorSim(robot_name, ee_link_name, Eigen::Affine3d::Identity(), robot);
 	force_display = new ForceSensorDisplay(force_sensor, graphics);
 
 	/*------- Set up visualization -------*/
@@ -387,9 +387,11 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simul
 		object->updateModel();
 
 		// update force sensor readings
-		force_sensor->update();
-		force_sensor->getForce(sensed_force);
-        force_sensor->getMoment(sensed_moment);
+		force_sensor->update(sim);
+		force_sensor->getForceLocalFrame(sensed_force);  // refer to ForceSensorSim.h in sai2-common/src/force_sensor (can also get wrt global frame)
+        force_sensor->getMomentLocalFrame(sensed_moment);
+
+		// std::cout << "Sensed Force: " << sensed_force.transpose() << "Sensed Moment: " << sensed_moment.transpose() << std::endl;
 
         // query object position and ee pos/ori for camera detection 
 		object->positionInWorld(obj_pos, "link6");
