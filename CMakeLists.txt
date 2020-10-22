@@ -77,5 +77,5 @@ add_subdirectory(hw1_solution)
 add_subdirectory(hw2)
 add_subdirectory(hw2_solution)
 add_subdirectory(hw3)
-# add_subdirectory(hw3_solution)
+add_subdirectory(hw3_solution)
 
