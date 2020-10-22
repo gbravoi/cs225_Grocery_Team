@@ -39,6 +39,188 @@ const std::string OBJ_JOINT_VELOCITIES_KEY = "cs225a::object::cup::sensors::dq";
 // - write:
 const std::string JOINT_TORQUES_COMMANDED_KEY  = "cs225a::robot::panda::actuators::fgc";
 
+//state machine states
+enum Simulation_states { 
+	IDLE=1,
+	GO_TO_SHELF,
+	PICK_SHELF_OBJECTS,
+	GO_TO_CONVEYOR,
+	PLACE_OBJECS_CONVEYOR
+	};
+
+enum Robot_States { 
+	R_IDLE = 1, 
+	PICKING_OBJECT,
+	PLACING_OBJECT,
+	MOVING_ARM,
+	ORIENTING_ARM,
+	NAVIGATING };
+
+enum Gripper_States{
+	OPENING_GRIPPER,
+	CLOSING_GRIPPER,
+};
+
+enum Events { 
+	CLOSE_TO_OBJECT = 1, 
+	CONTACT_DETECTED, 
+	GRIPPER_REACHED_FORCE, 
+	EE_REACHED_POSITION,
+	GRIPPER_OPEN };
+
+
+
+
+
+
+
+class Grocery_Robot{
+	VectorXd control_torques;
+	
+	public:	
+		Robot_States Current_state=Robot_States::R_IDLE; //robot state
+		//simulation
+		Sai2Model::Sai2Model* robot;
+		//dynamic properties
+		Eigen::MatrixXd J0; //end effector basic Jacobian
+		Eigen::MatrixXd L0; //Lambda_0 at end effector
+		MatrixXd N0;
+		MatrixXd Jv;
+		MatrixXd Lambda;
+		MatrixXd J_bar;
+		MatrixXd N;
+		VectorXd g;
+		//current states
+		Vector3d x;//current position
+		Vector3d x_vel;//current velocity
+		Vector3d x_acc;//current acceleration
+		Vector3d w;//current angular velocity
+		VectorXd q;//current joints angle
+		VectorXd dq;//current joints velocity
+		Eigen::Matrix3d R;//current orientation
+		//desired states
+		Vector3d x_des;//goal position
+		Vector3d x_vel_des;//goal velocity
+		Vector3d x_acc_des;//goal acceleration
+		VectorXd q_des;//goal joints angle
+		Eigen::Matrix3d R_des;//desired orientation
+		double q_gripper_goal;//gripper displacement (same for both)
+		//control constant
+		double kp ;      // chose your p gain
+		double kv;      // chose your d gain
+		double kvj; //joint damping
+		double kpj; //joint p gain
+		double V_max; //max velocity
+		
+		//Robot properties
+		int dof;
+		const string link_name = "link7";
+		const Vector3d pos_in_link = Vector3d(0, 0, 0.15);
+		
+
+
+	
+		VectorXd Position_controller(bool joint_control);
+		void Update_states();
+		void set_robot_state(Robot_States robot_state);
+
+};
+
+void Grocery_Robot::Update_states(){
+
+
+	// update robot model and compute gravity, and other stuff
+	robot->updateModel();
+	robot->gravityVector(g);
+	q=robot->_q;
+	dq=robot->_dq;
+	robot->position(x, link_name, pos_in_link);
+	robot->linearVelocity(x_vel, link_name, pos_in_link);
+	robot->angularVelocity(w, link_name);
+	robot->rotation(R, link_name);
+
+	robot->J_0(J0, link_name, pos_in_link);
+	robot->nullspaceMatrix(N0, J0);
+	robot->taskInertiaMatrix(L0, J0);
+
+	robot->Jv(Jv, link_name, pos_in_link);
+	robot->taskInertiaMatrix(Lambda, Jv);
+	robot->dynConsistentInverseJacobian(J_bar, Jv);
+	robot->nullspaceMatrix(N, Jv);
+	
+
+ };
+void Grocery_Robot::set_robot_state(Robot_States robot_state){
+	Current_state=robot_state;
+	cout << "Current Robot State "<<  robot_state <<endl;
+};
+VectorXd Grocery_Robot::Position_controller(bool joint_control){
+		Vector3d delta_phi;
+		delta_phi = -0.5 * (R.col(0).cross(R_des.col(0)) + R.col(1).cross(R_des.col(1)) + R.col(2).cross(R_des.col(2)));
+
+		double Vmax = 0.5;
+		x_vel_des = - kp / kv * (x - x_des);
+		double nu = sat(Vmax / x_vel_des.norm());
+
+		//joint desired state
+		if (joint_control==false){
+			q_des=robot->_q;//all other joints in current position
+			}
+		//Change end effector position
+		q_des(10)=q_gripper_goal;
+		q_des(11)=-1*q_gripper_goal;
+
+		Vector3d pd_x = - kp * nu * (x - x_des) - kv * x_vel;
+		Vector3d pd_w = kp * (- delta_phi) - kv * w;
+		VectorXd pd(6);
+		pd << pd_x[0], pd_x[1], pd_x[2], pd_w[0], pd_w[1], pd_w[2];
+
+		VectorXd F(6);
+		F = L0 * pd;
+		control_torques = J0.transpose() * F + N.transpose() * ( - (kvj * robot->_dq) -robot->_M*kpj*(robot->_q-q_des)) + 0*g;  // gravity is compensated in simviz loop as of now
+
+		return control_torques;
+ };
+
+
+//State machine sub functions
+VectorXd pick_shelf_objects(Grocery_Robot Robot){
+	VectorXd control_torques= VectorXd::Zero(Robot.dof);
+	double control_threshold=0.07;
+	
+
+	switch (Robot.Current_state)
+	{
+	case PICKING_OBJECT:
+		control_torques.setZero();
+		break;
+	case PLACING_OBJECT:
+		break;
+	case MOVING_ARM:
+		if( (Robot.x_des-Robot.x).norm()>control_threshold){
+			control_torques=Robot.Position_controller(false);
+			//cout<<(Robot.x_des-Robot.x).norm()<<endl;
+		}else{
+			Robot.set_robot_state(Robot_States::PICKING_OBJECT);
+			control_torques.setZero();
+		}
+		break;
+
+	case ORIENTING_ARM:
+		control_torques.setZero();
+		break;
+	
+	default:
+		control_torques.setZero();
+		break;
+	}
+	//Go to dle when done
+
+	return control_torques;
+}
+
+
+
 int main() {
 	
 	// Make sure redis-server is running at localhost with default port 6379
@@ -57,40 +239,10 @@ int main() {
 	robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
 	robot->updateModel();
 
-	// prepare controller
-	// note: please use sai2-primitive functions - explicit control law shown here for clarity
-	int dof = robot->dof();
-	const string link_name = "link7";
-	const Vector3d pos_in_link = Vector3d(0, 0, 0.15);
 
-	VectorXd control_torques = VectorXd::Zero(dof);
-	VectorXd gravity = VectorXd::Zero(dof);
-
-	Vector3d x1_des;
-	x1_des << 0, -0.8, 0.50;
-	Vector3d x2_des;
-	x2_des << 0, -0.6, 0.55;
-
-	// model quantities for operational space control
-	MatrixXd Jv = MatrixXd::Zero(3,dof);
-	MatrixXd Lambda = MatrixXd::Zero(3,3);
-	MatrixXd J_bar = MatrixXd::Zero(dof,3);
-	MatrixXd N = MatrixXd::Zero(dof,dof);
-
-	robot->Jv(Jv, link_name, pos_in_link);
-	robot->taskInertiaMatrix(Lambda, Jv);
-	robot->dynConsistentInverseJacobian(J_bar, Jv);
-	robot->nullspaceMatrix(N, Jv);
-
-	VectorXd F(6), g(dof), b(dof), joint_task_torque(dof), Gamma_damp(dof), Gamma_mid(dof);;
-	VectorXd q_high(dof), q_low(dof);
-	Vector3d x, x_vel, p, w;
-	Vector3d dxd, ddxd;
-	Matrix3d R, Rd;
-
-	Rd << 0.696707, -0.717356, -7.0252e-12,
-		-0.717356, -0.696707, -6.82297e-12,
-	 	 0, 9.79318e-12, -1;
+	//define variables
+	VectorXd control_torques = VectorXd::Zero(robot->dof());
+	Simulation_states current_simulation_state=Simulation_states::PICK_SHELF_OBJECTS; //in this state while writting function.
 
 	// create a loop timer
 	double control_freq = 1000;
@@ -102,67 +254,100 @@ int main() {
 
 	unsigned long long counter = 0;
 
+	
+
+
+
+
+	//START ROBOT
+	//get initial condition
+	Grocery_Robot Robot;
+	Robot.robot=robot; //sai2 model
+	Robot.dof = robot->dof();
+
+	robot->position(Robot.x_des, Robot.link_name, Robot.pos_in_link);//get initial position
+	robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY); //get current joint posiiton
+	robot->rotation(Robot.R_des, Robot.link_name); //current orientation
+	
+	//create robot object
+	Robot.x_vel_des << 0.0, 0.0, 0.0;//goal velocity
+	Robot.x_acc_des << 0.0, 0.0, 0.0;//goal acceleration
+	Robot.q_des=robot->_q;//goal joints angle
+	Robot.kp = 200.0;      // chose your p gain
+	Robot.kv = 30.0;      // chose your d gain
+	Robot.kvj=14.0; //joint damping
+	Robot.kpj=50.0; //joint p gain
+	Robot.V_max=0.5; //max velocity
+	
+
+
+	
+
 	runloop = true;
 	while (runloop) 
 	{ 
-		fTimerDidSleep = timer.waitForNextLoop();
+		
+fTimerDidSleep = timer.waitForNextLoop();
 
 		// read robot state from redis
 		robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
 		robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
-
-		// update robot model and compute gravity
 		robot->updateModel();
-		robot->gravityVector(g);
+		// update robot information (position, vel, J,L etc)
+		Robot.Update_states();
 
-		// compute control torques
-		robot->position(x, link_name, pos_in_link);
-		robot->linearVelocity(x_vel, link_name, pos_in_link);
-		robot->angularVelocity(w, link_name);
-		robot->rotation(R, link_name);
 
-		MatrixXd J(6, dof);
-		robot->J_0(J, link_name, pos_in_link);
-		robot->nullspaceMatrix(N, J);
+		//State machine
+		switch (current_simulation_state)
+		{
+		case Simulation_states::IDLE:
+			/* code */
+			control_torques.setZero();
+			break;
+		case Simulation_states::GO_TO_SHELF:
+			control_torques.setZero();
+			break;
+		case Simulation_states::PICK_SHELF_OBJECTS:
+			switch (Robot.Current_state)
+			{
+			//if robot is idle, go to the next object in the list
+			case Robot_States::R_IDLE:
+				//define object goal (go trough list)
+				Robot.x_des<< 0, -0.8, 0.50;
+				Robot.q_gripper_goal=0.04;
+				Robot.R_des << 0.696707, -0.717356, -7.0252e-12,
+					-0.717356, -0.696707, -6.82297e-12,
+					0, 9.79318e-12, -1;
+				//change robot status to moving to goal
+				Robot.set_robot_state(Robot_States::MOVING_ARM);
+				break;
+			
+			default://keep doing what was doing
+				control_torques=pick_shelf_objects(Robot); 
+				break;
+			}
+			
+			
+			control_torques=pick_shelf_objects(Robot); //maybe pass object, to check object position?
+			break;
+		case Simulation_states::GO_TO_CONVEYOR:
+			control_torques.setZero();
+			break;
+		case Simulation_states::PLACE_OBJECS_CONVEYOR:
+			control_torques.setZero();
+			break;
+		default:
+			control_torques.setZero();
+			break;
+		}
 
-		MatrixXd Lambda0(6, 6);
-		robot->taskInertiaMatrix(Lambda0, J);
-
-		// note: please use sai2-primitive functions - explicit control law shown here for clarity
-
-		double kp = 25;
-		double kv = 10;
-		double kpj = 10;
-		double kvj = 5;
-		double kdamp = 10;
-		double kmid = 10;
-
-		// q_high << 2.8973, 1.7628, 2.8973, -0.0698, 2.8973, 3.7525, 2.8973;
-		// q_low << -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973;
-
-		// Gamma_mid = - (kmid * (2 * robot->_q - (q_high + q_low)));
-		Gamma_damp = - (kdamp * robot->_dq);
-
-		Vector3d delta_phi;
-		delta_phi = -0.5 * (R.col(0).cross(Rd.col(0)) + R.col(1).cross(Rd.col(1)) + R.col(2).cross(Rd.col(2)));
-
-		double Vmax = 0.5;
-		dxd = - kp / kv * (x - x1_des);
-		double nu = sat(Vmax / dxd.norm());
-
-		Vector3d pd_x = - kp * nu * (x - x1_des) - kv * x_vel;
-		Vector3d pd_w = kp * (- delta_phi) - kv * w;
-		VectorXd pd(6);
-		pd << pd_x[0], pd_x[1], pd_x[2], pd_w[0], pd_w[1], pd_w[2];
-
-		VectorXd F(6);
-		F = Lambda0 * pd;
-		control_torques = J.transpose() * F + N.transpose() * ( Gamma_damp ) + 0*g;  // gravity is compensated in simviz loop as of now
-
-		// send torques to redis
+		//Compute controller
+			
 		redis_client.setEigenMatrixJSON(JOINT_TORQUES_COMMANDED_KEY, control_torques);
 
 		counter++;
+
+
 	}
 
 	control_torques.setZero();
