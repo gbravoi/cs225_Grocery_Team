@@ -191,24 +191,17 @@ VectorXd Grocery_Robot::Position_controller(bool joint_control){
  };
 
 bool Grocery_Robot::checkWaypoints(MatrixXd& waypoints, int num_waypoints){
-	cout<<waypoint_iterator<<endl;
 	if(waypoint_iterator == -1){
 		waypoint_iterator = 0;
-		cout<<waypoint_iterator<<endl;
-		cout<<"EWF";
 		last_waypoint_arrival_time = cur_time;
 		x_des = waypoints.col(waypoint_iterator);
 	}
 
 	Vector3d dist = x-waypoints.col(waypoint_iterator);
-	// cout<<cur_time - last_waypoint_arrival_time<<endl;
 	if(dist.norm() < distance_thres || cur_time - last_waypoint_arrival_time > max_time_btw_waypoints){
-		// cout<<waypoints.col(waypoint_iterator)<<endl;
-		// cout<<waypoint_iterator<<endl;
 		waypoint_iterator++;
 		last_waypoint_arrival_time = cur_time;
 		if(waypoint_iterator >= num_waypoints){
-			cout<<"WEFEWFWEFWEF"<<endl;
 			waypoint_iterator = -1;
 			return true;
 		}else{
@@ -221,7 +214,6 @@ bool Grocery_Robot::checkWaypoints(MatrixXd& waypoints, int num_waypoints){
 //State machine sub functions
 VectorXd pick_shelf_objects(Grocery_Robot *Robot){
 	bool arrived = Robot->checkWaypoints(Robot->basket_to_shelf_waypoints, 5);
-	cout<<Robot->waypoint_iterator<<endl;
 	VectorXd control_torques= VectorXd::Zero(Robot->dof);
 	double control_threshold=0.07;
 	control_torques=Robot->Position_controller(false);
@@ -361,7 +353,6 @@ fTimerDidSleep = timer.waitForNextLoop();
 			control_torques.setZero();
 			break;
 		// case Simulation_states::BETWEEN_WAYPOINTS:
-		// 	checkWaypoints();
 		// 	break;
 		case Simulation_states::GO_TO_SHELF:
 			control_torques.setZero();
