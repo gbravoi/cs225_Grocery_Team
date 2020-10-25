@@ -12,7 +12,7 @@ using namespace Eigen;
 bool runloop = false;
 void sighandler(int){runloop = false;}
 
-// helper function 
+// helper function
 double sat(double x) {
 	if (abs(x) <= 1.0) {
 		return x;
@@ -21,7 +21,7 @@ double sat(double x) {
 		return signbit(x);
 	}
 }
- 
+
 #define RAD(deg) ((double)(deg) * M_PI / 180.0)
 
 // Location of URDF files specifying world and robot information
@@ -40,15 +40,15 @@ const std::string OBJ_JOINT_VELOCITIES_KEY = "cs225a::object::cup::sensors::dq";
 // - write:
 const std::string JOINT_TORQUES_COMMANDED_KEY  = "cs225a::robot::panda::actuators::fgc";
 
-// manual object offset since the offset in world.urdf file since positionInWorld() doesn't account for this 
+// manual object offset since the offset in world.urdf file since positionInWorld() doesn't account for this
 // Eigen::Vector3d obj_offset;
 // obj_offset << 0, -0.35, 0.544;
 // Eigen::Vector3d robot_offset;
-// robot_offset << 0.0, 0.3, 0.0;	
+// robot_offset << 0.0, 0.3, 0.0;
 
 
 //state machine states
-enum Simulation_states { 
+enum Simulation_states {
 	IDLE=1,
 	GO_TO_SHELF,
 	PICK_SHELF_OBJECTS,
@@ -56,8 +56,8 @@ enum Simulation_states {
 	PLACE_OBJECS_CONVEYOR
 	};
 
-enum Robot_States { 
-	R_IDLE = 1, 
+enum Robot_States {
+	R_IDLE = 1,
 	PICKING_OBJECT,
 	PLACING_OBJECT,
 	MOVING_ARM,
@@ -69,23 +69,18 @@ enum Gripper_States{
 	CLOSING_GRIPPER,
 };
 
-enum Events { 
-	CLOSE_TO_OBJECT = 1, 
-	CONTACT_DETECTED, 
-	GRIPPER_REACHED_FORCE, 
+enum Events {
+	CLOSE_TO_OBJECT = 1,
+	CONTACT_DETECTED,
+	GRIPPER_REACHED_FORCE,
 	EE_REACHED_POSITION,
 	GRIPPER_OPEN };
 
 
-
-
-
-
-
 class Grocery_Robot{
 	VectorXd control_torques;
-	
-	public:	
+
+	public:
 		Robot_States Current_state=Robot_States::R_IDLE; //robot state
 		//simulation
 		Sai2Model::Sai2Model* robot;
@@ -113,30 +108,35 @@ class Grocery_Robot{
 		VectorXd q_des;//goal joints angle
 		Eigen::Matrix3d R_des;//desired orientation
 		double q_gripper_goal;//gripper displacement (same for both)
+		//time, waypoints
+		double cur_time;
+		MatrixXd basket_to_shelf_waypoints;
+		double last_waypoint_arrival_time;
+		double max_time_btw_waypoints = 2.0;
+		int waypoint_iterator=-1;
+		double distance_thres = 0.01;
 		//control constant
 		double kp ;      // chose your p gain
 		double kv;      // chose your d gain
 		double kvj; //joint damping
 		double kpj; //joint p gain
 		double V_max; //max velocity
-		
+
 		//Robot properties
 		int dof;
 		const string link_name = "link7";
 		const Vector3d pos_in_link = Vector3d(0, 0, 0.15);
-		
 
 
-	
+
+
 		VectorXd Position_controller(bool joint_control);
 		void Update_states();
 		void set_robot_state(Robot_States robot_state);
-
+		bool checkWaypoints(MatrixXd& waypoints, int num_waypoints);
 };
 
 void Grocery_Robot::Update_states(){
-
-
 	// update robot model and compute gravity, and other stuff
 	robot->updateModel();
 	robot->gravityVector(g);
@@ -155,13 +155,13 @@ void Grocery_Robot::Update_states(){
 	robot->taskInertiaMatrix(Lambda, Jv);
 	robot->dynConsistentInverseJacobian(J_bar, Jv);
 	robot->nullspaceMatrix(N, Jv);
-	
-
  };
+
 void Grocery_Robot::set_robot_state(Robot_States robot_state){
 	Current_state=robot_state;
 	cout << "Current Robot State "<<  robot_state <<endl;
 };
+
 VectorXd Grocery_Robot::Position_controller(bool joint_control){
 		Vector3d delta_phi;
 		delta_phi = -0.5 * (R.col(0).cross(R_des.col(0)) + R.col(1).cross(R_des.col(1)) + R.col(2).cross(R_des.col(2)));
@@ -190,14 +190,43 @@ VectorXd Grocery_Robot::Position_controller(bool joint_control){
 		return control_torques;
  };
 
+bool Grocery_Robot::checkWaypoints(MatrixXd& waypoints, int num_waypoints){
+	cout<<waypoint_iterator<<endl;
+	if(waypoint_iterator == -1){
+		waypoint_iterator = 0;
+		cout<<waypoint_iterator<<endl;
+		cout<<"EWF";
+		last_waypoint_arrival_time = cur_time;
+		x_des = waypoints.col(waypoint_iterator);
+	}
+
+	Vector3d dist = x-waypoints.col(waypoint_iterator);
+	// cout<<cur_time - last_waypoint_arrival_time<<endl;
+	if(dist.norm() < distance_thres || cur_time - last_waypoint_arrival_time > max_time_btw_waypoints){
+		// cout<<waypoints.col(waypoint_iterator)<<endl;
+		// cout<<waypoint_iterator<<endl;
+		waypoint_iterator++;
+		last_waypoint_arrival_time = cur_time;
+		if(waypoint_iterator >= num_waypoints){
+			cout<<"WEFEWFWEFWEF"<<endl;
+			waypoint_iterator = -1;
+			return true;
+		}else{
+			x_des = waypoints.col(waypoint_iterator);
+		}
+	}
+	return false;
+}
 
 //State machine sub functions
-VectorXd pick_shelf_objects(Grocery_Robot Robot){
-	VectorXd control_torques= VectorXd::Zero(Robot.dof);
+VectorXd pick_shelf_objects(Grocery_Robot *Robot){
+	bool arrived = Robot->checkWaypoints(Robot->basket_to_shelf_waypoints, 5);
+	cout<<Robot->waypoint_iterator<<endl;
+	VectorXd control_torques= VectorXd::Zero(Robot->dof);
 	double control_threshold=0.07;
-	control_torques=Robot.Position_controller(false);
+	control_torques=Robot->Position_controller(false);
 
-	switch (Robot.Current_state)
+	switch (Robot->Current_state)
 	{
 	case PICKING_OBJECT:
 		control_torques.setZero();
@@ -205,19 +234,22 @@ VectorXd pick_shelf_objects(Grocery_Robot Robot){
 	case PLACING_OBJECT:
 		break;
 	case MOVING_ARM:
-		if( (Robot.x_des-Robot.x).norm()>control_threshold){
-			control_torques=Robot.Position_controller(false);
+		if( (Robot->x_des-Robot->x).norm()>control_threshold){
+			control_torques=Robot->Position_controller(false);
 			//cout<<(Robot.x_des-Robot.x).norm()<<endl;
-		}else{
-			Robot.set_robot_state(Robot_States::PICKING_OBJECT);
-			control_torques.setZero();
+		}
+		else{
+			if(arrived){
+				Robot->set_robot_state(Robot_States::PICKING_OBJECT);
+				control_torques.setZero();
+			}
 		}
 		break;
 
 	case ORIENTING_ARM:
 		control_torques.setZero();
 		break;
-	
+
 	default:
 		control_torques.setZero();
 		break;
@@ -230,7 +262,7 @@ VectorXd pick_shelf_objects(Grocery_Robot Robot){
 
 
 int main() {
-	
+
 	// Make sure redis-server is running at localhost with default port 6379
 	// start redis client
 	RedisClient redis_client = RedisClient();
@@ -268,7 +300,7 @@ int main() {
 
 	unsigned long long counter = 0;
 
-	
+
 
 
 
@@ -282,8 +314,9 @@ int main() {
 	robot->positionInWorld(Robot.x_des, Robot.link_name, Robot.pos_in_link);//get initial position
 	robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY); //get current joint posiiton
 	robot->rotation(Robot.R_des, Robot.link_name); //current orientation
-	
+
 	//create robot object
+	Robot.cur_time = timer.elapsedTime();
 	Robot.x_vel_des << 0.0, 0.0, 0.0;//goal velocity
 	Robot.x_acc_des << 0.0, 0.0, 0.0;//goal acceleration
 	Robot.q_des=robot->_q;//goal joints angle
@@ -292,15 +325,23 @@ int main() {
 	Robot.kvj=14.0; //joint damping
 	Robot.kpj=50.0; //joint p gain
 	Robot.V_max=0.5; //max velocity
-	
+	//initialize waypoints
+	Robot.basket_to_shelf_waypoints = MatrixXd(5,3);
+	Robot.basket_to_shelf_waypoints<< 0.5,0.5,0.5,
+	0.8,0.8,0.8,
+	-0.2,-0.2,0.5,
+	1.5,1.0,0.5,
+	-1.0,0.5,0.8;
+	Robot.basket_to_shelf_waypoints.transposeInPlace();
+	Robot.waypoint_iterator = -1;
 
 
-	
+
 
 	runloop = true;
-	while (runloop) 
-	{ 
-		
+	while (runloop)
+	{
+
 fTimerDidSleep = timer.waitForNextLoop();
 
 		// read robot state from redis
@@ -311,8 +352,7 @@ fTimerDidSleep = timer.waitForNextLoop();
 		object->updateModel();
 		// update robot information (position, vel, J,L etc)
 		Robot.Update_states();
-
-
+		Robot.cur_time = timer.elapsedTime();
 		//State machine
 		switch (current_simulation_state)
 		{
@@ -320,6 +360,9 @@ fTimerDidSleep = timer.waitForNextLoop();
 			/* code */
 			control_torques.setZero();
 			break;
+		// case Simulation_states::BETWEEN_WAYPOINTS:
+		// 	checkWaypoints();
+		// 	break;
 		case Simulation_states::GO_TO_SHELF:
 			control_torques.setZero();
 			break;
@@ -339,14 +382,14 @@ fTimerDidSleep = timer.waitForNextLoop();
 				//change robot status to moving to goal
 				Robot.set_robot_state(Robot_States::MOVING_ARM);
 				break;
-			
+
 			default://keep doing what was doing
-				control_torques=pick_shelf_objects(Robot); 
+				// control_torques=f(Robot);
 				break;
 			}
-			
-			
-			control_torques=pick_shelf_objects(Robot); //maybe pass object, to check object position?
+
+
+			control_torques=pick_shelf_objects(&Robot); //maybe pass object, to check object position?
 			break;
 		case Simulation_states::GO_TO_CONVEYOR:
 			control_torques.setZero();
@@ -360,7 +403,7 @@ fTimerDidSleep = timer.waitForNextLoop();
 		}
 
 		//Compute controller
-			
+
 		redis_client.setEigenMatrixJSON(JOINT_TORQUES_COMMANDED_KEY, control_torques);
 
 		counter++;
