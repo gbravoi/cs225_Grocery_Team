@@ -185,12 +185,12 @@
         <mesh filename="../../../model/panda/meshes/visual/hand.obj"/>
       </geometry>
     </visual>
-  <collision>
+<!--   <collision>
       <origin xyz="0 0 0.107" rpy="0 0 -0.78539816339" />
       <geometry>
         <mesh filename="../../../model/panda/meshes/collision/hand.obj"/>
       </geometry>
-    </collision> 
+    </collision> -->
   </link>
   <link name="leftfinger">
       <inertial>
@@ -221,12 +221,12 @@
           <mesh filename="../../../model/panda/meshes/visual/finger.obj"/>
         </geometry>
       </visual>
-       <collision>
+ <!--       <collision>
         <origin xyz="0 0 0" rpy="0 0 3.14159265359" />
         <geometry>
           <mesh filename="../../../model/panda/meshes/collision/finger.obj"/>
         </geometry>
-      </collision> 
+      </collision> -->
     </link>
 
   <!-- JOINTS -->

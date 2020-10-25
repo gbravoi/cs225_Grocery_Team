@@ -26,6 +26,7 @@ double sat(double x) {
 
 // Location of URDF files specifying world and robot information
 const string robot_file = "./resources/mmp_panda.urdf";
+const string obj_file = "./resources/cup.urdf";
 
 // Redis is just a key value store, publish/subscribe is also possible
 // The visualizer and simulator will have keys like "cs225a::robot::{ROBOTNAME}::sensors::q"
@@ -38,6 +39,13 @@ const std::string OBJ_JOINT_ANGLES_KEY  = "cs225a::object::cup::sensors::q";
 const std::string OBJ_JOINT_VELOCITIES_KEY = "cs225a::object::cup::sensors::dq";
 // - write:
 const std::string JOINT_TORQUES_COMMANDED_KEY  = "cs225a::robot::panda::actuators::fgc";
+
+// manual object offset since the offset in world.urdf file since positionInWorld() doesn't account for this 
+// Eigen::Vector3d obj_offset;
+// obj_offset << 0, -0.35, 0.544;
+// Eigen::Vector3d robot_offset;
+// robot_offset << 0.0, 0.3, 0.0;	
+
 
 //state machine states
 enum Simulation_states { 
@@ -134,7 +142,7 @@ void Grocery_Robot::Update_states(){
 	robot->gravityVector(g);
 	q=robot->_q;
 	dq=robot->_dq;
-	robot->position(x, link_name, pos_in_link);
+	robot->positionInWorld(x, link_name, pos_in_link);
 	robot->linearVelocity(x_vel, link_name, pos_in_link);
 	robot->angularVelocity(w, link_name);
 	robot->rotation(R, link_name);
@@ -187,7 +195,7 @@ VectorXd Grocery_Robot::Position_controller(bool joint_control){
 VectorXd pick_shelf_objects(Grocery_Robot Robot){
 	VectorXd control_torques= VectorXd::Zero(Robot.dof);
 	double control_threshold=0.07;
-	
+	control_torques=Robot.Position_controller(false);
 
 	switch (Robot.Current_state)
 	{
@@ -235,7 +243,9 @@ int main() {
 
 	// load robots, read current state nd update the model
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
+	auto object = new Sai2Model::Sai2Model(obj_file, false);
 	robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
+	object->_q =redis_client.getEigenMatrixJSON(OBJ_JOINT_ANGLES_KEY);
 	robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
 	robot->updateModel();
 
@@ -243,6 +253,10 @@ int main() {
 	//define variables
 	VectorXd control_torques = VectorXd::Zero(robot->dof());
 	Simulation_states current_simulation_state=Simulation_states::PICK_SHELF_OBJECTS; //in this state while writting function.
+
+	//objects variables
+	Vector3d x_obj;
+	object->positionInWorld(x_obj, "link1", Vector3d(0, 0, 0));
 
 	// create a loop timer
 	double control_freq = 1000;
@@ -265,7 +279,7 @@ int main() {
 	Robot.robot=robot; //sai2 model
 	Robot.dof = robot->dof();
 
-	robot->position(Robot.x_des, Robot.link_name, Robot.pos_in_link);//get initial position
+	robot->positionInWorld(Robot.x_des, Robot.link_name, Robot.pos_in_link);//get initial position
 	robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY); //get current joint posiiton
 	robot->rotation(Robot.R_des, Robot.link_name); //current orientation
 	
@@ -292,7 +306,9 @@ fTimerDidSleep = timer.waitForNextLoop();
 		// read robot state from redis
 		robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
 		robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
+		object->_q== redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
 		robot->updateModel();
+		object->updateModel();
 		// update robot information (position, vel, J,L etc)
 		Robot.Update_states();
 
@@ -313,7 +329,9 @@ fTimerDidSleep = timer.waitForNextLoop();
 			//if robot is idle, go to the next object in the list
 			case Robot_States::R_IDLE:
 				//define object goal (go trough list)
-				Robot.x_des<< 0, -0.8, 0.50;
+				//Robot.x_des<< 0, -0.8, 0.50;
+				object->positionInWorld(x_obj, "link6", Vector3d(0, 0, 0));
+				Robot.x_des=x_obj;
 				Robot.q_gripper_goal=0.04;
 				Robot.R_des << 0.696707, -0.717356, -7.0252e-12,
 					-0.717356, -0.696707, -6.82297e-12,
