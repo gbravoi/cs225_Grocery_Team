@@ -101,13 +101,13 @@ int main() {
 
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
-	robot->_q(0) = -0.8;
+	robot->_q(3) = -0.8;
 	robot->updateModel();
 
 	// load robot objects
 	auto object = new Sai2Model::Sai2Model(obj_file, false);
-	// object->_q(0) = 0.60;
-	// object->_q(1) = -0.35;
+	// object->_q(0) = 0.10;
+	//object->_q(1) = -0.35;
 	object->updateModel();
 
 	// load simulation world
