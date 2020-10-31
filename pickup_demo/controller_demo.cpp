@@ -68,20 +68,17 @@ enum Robot_States {
 	PLACING_OBJECT,
 	NAVIGATING };
 
-enum Gripper_States{
-	OPENING_GRIPPER,
-	CLOSING_GRIPPER,
-};
 
-enum Events {
-	CLOSE_TO_OBJECT = 1,
-	CONTACT_DETECTED,
-	GRIPPER_REACHED_FORCE,
-	EE_REACHED_POSITION,
-	GRIPPER_OPEN };
 
-//object class
+//------------------------------------------
+//-------------CLASSES DEFINITION-----------
+//------------------------------------------
+
+//************OBJECT**********************
 class Objects_class{
+	/**
+	 * Class to represent objects that the robot willl interact
+	 **/
 	public:
 		//simulation
 		Sai2Model::Sai2Model* SAI2_object;//SAI2 representation of the object
@@ -110,10 +107,11 @@ void Objects_class::Update_states(){
  };
 
 
+//************GROCERY ROBOT**********************
 class Grocery_Robot{
-	//This is the robot class.
-	
-
+	/**
+	 * Class the represent the robot, its state and dynamics
+	 **/
 	public:
 		//******list of atributes***********:
 		Robot_States Current_state=Robot_States::R_IDLE; //robot state
@@ -154,8 +152,8 @@ class Grocery_Robot{
 		VectorXd q;//current joints angle
 		VectorXd dq;//current joints velocity
 
-		//save last base position for the case we want to move it
-		Vector3d base_position;
+		
+		Vector3d base_position;//save last base position for the case we want to move arm while keeping that posiiton. Done by navigation state function.
 		
 		
 		//time, waypoints
@@ -165,12 +163,11 @@ class Grocery_Robot{
 		double max_time_btw_waypoints = 2.0;
 		int waypoint_iterator=-1;
 		double distance_thres = 0.01;
+		Vector3d next_waypoint;
 		
 
 		double Vmax_robot=0.5; //max velocity
 
-		//object to interact
-		//Sai2Model::Sai2Model* target_object;//object the robot needs to interact
 
 		//Robot properties
 		int dof;
@@ -181,7 +178,7 @@ class Grocery_Robot{
 		VectorXd force_finger_l;//measured force by sensor
 		VectorXd force_eef;//force in the link 7 of the end effector
 		double open_finger=0.04; //joint position of open finger
-		VectorXd HomePosition;
+		VectorXd HomePosition;//position keeped by the robot while navigating
 
 
 
@@ -189,11 +186,11 @@ class Grocery_Robot{
 		void Update_states();
 		void Update_dynamics(bool world_coordinates);
 		void set_robot_state(Robot_States robot_state);
-		//bool checkWaypoints(MatrixXd& waypoints, int num_waypoints);
+		bool checkWaypoints(MatrixXd& waypoints, int num_waypoints);
 };
 
 void Grocery_Robot::Update_states(){
-	// update robot model and compute gravity, and other stuff
+	// update robot position and orientation i base and world frame
 	robot->updateModel();
 	q=robot->_q;
 	dq=robot->_dq;
@@ -257,12 +254,34 @@ void Grocery_Robot::set_robot_state(Robot_States robot_state){
 	Current_state=robot_state;
 	cout << "Current Robot State "<<  robot_state <<endl;
 };
+bool Grocery_Robot::checkWaypoints(MatrixXd& waypoints, int num_waypoints){
+	/**
+	 * Function that ensures the robot follow a set of waypoints.
+	 * These points are in baseframe
+	 **/
+	if(waypoint_iterator == -1){
+		waypoint_iterator = 0;
+		last_waypoint_arrival_time = cur_time;
+		next_waypoint = waypoints.col(waypoint_iterator);
+	}
 
+	Vector3d dist = x-waypoints.col(waypoint_iterator);
+	if(dist.norm() < distance_thres || cur_time - last_waypoint_arrival_time > max_time_btw_waypoints){
+		waypoint_iterator++;
+		last_waypoint_arrival_time = cur_time;
+		if(waypoint_iterator >= num_waypoints){
+			waypoint_iterator = -1;
+			return true;
+		}else{
+			next_waypoint = waypoints.col(waypoint_iterator);
+		}
+	}
+	return false;
+}
 
 //#######Controllers####
 /**
- * We can control independently the base, the arm and the finger.
- * Then we stack the torques in one vector to pass to the simulator
+ * We can control independently the base, the arm in base frame, the arm in world frame (this will also move the base) and gripper.
  * */
 
 class Controller{
@@ -288,8 +307,9 @@ class Controller{
 };
 void Controller::Arm_World_Position_Orientation_controller(Vector3d goal_pos_in_world,Matrix3d R_des=Matrix3d::Zero(3,3), double Vmax=0.0){
 	/**
-	 *This controller will control all robot to reach object.
-	 Moving platfor a little is needed to achieve the right orientation
+	 *This controller will control all robot to reach an object.
+	 this control is in world frame
+	 Moving platfor a little is needed to achieve the right orientation/posiition
 	 **/
 	double nu=1;
 	VectorXd control_torques;
@@ -350,7 +370,7 @@ void Controller::Arm_World_Position_Orientation_controller(Vector3d goal_pos_in_
 void Controller::Arm_Local_Position_Orientation_controller(Vector3d goal_pos_in_base,Matrix3d R_des=Matrix3d::Zero(3,3), double Vmax=0.0){
 	/**
 	 *This controller will only move the arm
-	 *positions hsould be described in the base frame of the robot
+	 *positions should be described in the base frame of the robot
 	 **/
 	VectorXd control_torques=VectorXd::Zero(Robot->dof);
 	VectorXd arm_controller;
@@ -422,6 +442,7 @@ void Controller::Arm_Local_Position_Orientation_controller(Vector3d goal_pos_in_
 
 void Controller::Gripper_controller(double gripper_force){
 	/**
+	 * This an auxiliary function to determine the finger torques. This will be added to any other torque being commanded during the Return_torques function.
 	 * Gripper force =0 open,
 	 * else, close with that force
 	 **/
@@ -476,7 +497,7 @@ VectorXd Controller::Return_torques(){
 	 **/
 	VectorXd control_torques = VectorXd::Zero(Robot->dof);
 	
-	//inf force on gripper is 0, compute open gripper
+	//if force on gripper is 0, compute open gripper controller
 	if (finger_torques==VectorXd::Zero(2)){
 		Gripper_controller(0);
 	}
@@ -508,6 +529,7 @@ VectorXd Controller::Return_torques(){
 
 double pick_shelf_objects_counter=0;
 Vector3d ref_pos;//used when neede to keep the old position of the object
+
 VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object){
 	
 	Grocery_Robot* Robot=RobotController->Robot;
@@ -535,6 +557,7 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 	R_des<< 1.57079632679,1.57079632679, 0.0,
 		0.0, 0.0, -1.0,
 		-1.57079632679, 1.57079632679, 0.0;
+	//Todo: align with shelft in other orientations.
 
 	x_w=Robot->x_w;
 	base_initial_pos<<Robot->q(0),Robot->q(1),Robot->q(2);
@@ -546,7 +569,7 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 		case MOVING_ARM:
 			/**
 			 * move arm in front of the shelve.
-			 * this will be the heigh of the object, but keeping safe distance from the shelve (y distance)
+			 * this will be the heigh of the object, but keeping safe distance from the shelve 
 			 * this could be also reach using way points
 			 * **/
 			
@@ -630,7 +653,7 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 				if (pick_shelf_objects_counter>2000){
 					//move a little up
 					target_pos=ref_pos;
-					cout<<"target"<<target_pos.transpose()<<endl;
+					
 					//cout<<"current"<<x_w.transpose()<<endl;
 					target_pos(2)+=0.1;//this is the distance that will go up, latter replace depending on the shelf.
 					if ((target_pos-x_w).norm()<=control_threshold){
@@ -670,7 +693,7 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			target_pos(2)=ref_pos(2);//keep same height
 						
 			if ((target_pos-x_w).norm()<=control_threshold){
-				//Robot->set_robot_state(Robot_States::PLACING_OBJECT);
+				Robot->set_robot_state(Robot_States::PLACING_OBJECT);
 				RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des,0.1);
 				RobotController->Gripper_controller(force);//gripper will hold in the designated force
 				control_torques=RobotController->Return_torques();
@@ -684,36 +707,38 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 
 
 		case PLACING_OBJECT:
-			//placinf object in the basket.
-			// arrived = Robot->checkWaypoints(Robot->basket_to_shelf_waypoints, 5);
-		
-			// if( (Robot->x_des-Robot->x).norm()>control_threshold){
-			// 	control_torques=Robot->Position_orientation_controller(false);
-			// 	//cout<<(Robot.x_des-Robot.x).norm()<<endl;
-			// }
-			// else{
-			// 	if(arrived){
-			// 		Robot->set_robot_state(Robot_States::PICKING_OBJECT);
-			// 		control_torques.setZero();
-			// 	}
-			// }
-			control_torques.setZero();
+			//placing object in the basket. Follow waypoints in base frame
+			arrived=Robot->checkWaypoints(Robot->basket_to_shelf_waypoints, 5);
+			target_pos = Robot->next_waypoint;
+			if(arrived){
+					Robot->set_robot_state(Robot_States::R_IDLE);
+					control_torques.setZero();
+			}
+			else{
+				if( (target_pos-x_w).norm()>control_threshold){
+					RobotController->Arm_Local_Position_Orientation_controller(target_pos);
+					RobotController->Gripper_controller(force);//gripper will hold in the designated force
+					control_torques=RobotController->Return_torques();
+				}
+			
+				
+			}
 			break;
 
 		default:
 			control_torques.setZero();
 			break;
 		}
-		//Go to dle when done
+
 
 	return control_torques;
 };
 
 
-//************Navigate to a point*****
+//************Base Navigate to a point*****
 VectorXd Navigate_to_point(Controller *RobotController , Vector3d point_world, double V_max=0.0){
 	/**
-	 * Auxiliary function to navegate to a point,
+	 *Function to base navegate to a point, while keeping arm in home position
 	 * gives the needed torques and perfr=orm other operations needed like log the last platform position.
 	 **/
 	Grocery_Robot* Robot=RobotController->Robot;
@@ -863,35 +888,19 @@ fTimerDidSleep = timer.waitForNextLoop();
 			Position<<1.0,1.0,0.0;//this shoudl be the positon of the shelf
 			Nav_Vmax=0.5;//local maximum velocity
 			control_torques=Navigate_to_point(&RobotController , Position,Nav_Vmax);
-			//control_torques.setZero();
+
 			break;
+
+
 		case Simulation_states::PICK_SHELF_OBJECTS:
 			 switch (Robot.Current_state)
 			{
 			//if robot is idle, go to the next object in the list
 			//if list ended, move to go to conveyor
 			 case Robot_States::R_IDLE:
-				//move to the next object
-				//Robot.set_robot_state(Robot_States::MOVING_ARM);
-				//control_torques=pick_shelf_objects(&RobotController,&Cup); //maybe pass object, to check object position?
-				//Arm_Local_Position_Orientation_controller(Vector3d goal_pos_in_base,Matrix3d R_des=Matrix3d::Zero(3,3), double Vmax=0.0)
-				
-				
-				
-				Position<<0.2,0.2,0.2;//this shoudl be the positon of the shelf
-				RobotController.Arm_Local_Position_Orientation_controller(Position);
-				control_torques=RobotController.Return_torques();
-				
-
-			// 	Position<<1.0,1.0,0.0;//this shoudl be the positon of the shelf
-			// Nav_Vmax=0.5;//local maximum velocity
-			// control_torques=Navigate_to_point(&RobotController , Position,Nav_Vmax);
-
-
-				// cout<<control_torques.transpose()<<endl;
-				// cout<<Robot.q.transpose()<<endl;
-
-				
+				//TODO: move to the next object
+				Robot.set_robot_state(Robot_States::MOVING_ARM);
+				control_torques=pick_shelf_objects(&RobotController,&Cup); 
 
 				break;
 			 default:
