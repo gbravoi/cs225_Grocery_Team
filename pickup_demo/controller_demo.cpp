@@ -133,8 +133,10 @@ class Grocery_Robot{
 		//matrices needed for arm control
 		MatrixXd Jv_arm;
 		MatrixXd Lv_arm;
+		MatrixXd N_arm;
 		MatrixXd J0_arm;
 		MatrixXd L0_arm;
+		MatrixXd N0_arm;
 		MatrixXd M_arm;
 
 		//states that could be in world or robot frame, updated with dynamics
@@ -151,6 +153,9 @@ class Grocery_Robot{
 		//other states
 		VectorXd q;//current joints angle
 		VectorXd dq;//current joints velocity
+
+		//save last base position for the case we want to move it
+		Vector3d base_position;
 		
 		
 		//time, waypoints
@@ -233,10 +238,17 @@ void Grocery_Robot::Update_states(){
 	Jv_arm=	Jv.block(0,3,3,7);//A.block(i,j,m,n): Returns a matrix containing the block of m rows and n columns whose upper left corner is at (i,j)
 	M_arm=M.block(3,3,7,7);
 	Lv_arm=(Jv_arm*M_arm.inverse()*Jv_arm.transpose()).inverse();
+	MatrixXd Iv=MatrixXd::Zero(3, 3);
+	MatrixXd Jv_bar;
+	Jv_bar=M_arm.inverse()*Jv_arm.transpose()*Lv_arm;
+	N_arm=Iv-Jv_arm.transpose()*Jv_bar.transpose();
 	
 	J0_arm=	J0.block(0,3,6,7);//A.block(i,j,m,n): Returns a matrix containing the block of m rows and n columns whose upper left corner is at (i,j)
 	L0_arm=(J0_arm*M_arm.inverse()*J0_arm.transpose()).inverse();
-
+	MatrixXd I0=MatrixXd::Zero(6, 6);
+	MatrixXd J0_bar;
+	J0_bar=M_arm.inverse()*J0_arm.transpose()*L0_arm;
+	N0_arm=I0-J0_arm.transpose()*J0_bar.transpose();
 	
  };
 
@@ -256,8 +268,6 @@ void Grocery_Robot::set_robot_state(Robot_States robot_state){
 class Controller{
 	public:
 		Grocery_Robot* Robot;
-		VectorXd arm_torques;
-		Vector3d base_torques;
 		Vector2d finger_torques;
 		VectorXd Whole_body_controller; //used when robot is picking bjects
 		//control constant
@@ -342,7 +352,9 @@ void Controller::Arm_Local_Position_Orientation_controller(Vector3d goal_pos_in_
 	 *This controller will only move the arm
 	 *positions hsould be described in the base frame of the robot
 	 **/
-	VectorXd control_torques;
+	VectorXd control_torques=VectorXd::Zero(Robot->dof);
+	VectorXd arm_controller;
+	VectorXd base_controller;
 	double nu=1;
 	Vector3d x_vel_des;
 	bool world_coordinates=false;
@@ -353,8 +365,13 @@ void Controller::Arm_Local_Position_Orientation_controller(Vector3d goal_pos_in_
 	Robot->Update_dynamics();//update in base coordinates
 	MatrixXd Jv=Robot->Jv_arm;
 	MatrixXd Lv=Robot->Lv_arm;
+	MatrixXd N=Robot->N_arm;
 	MatrixXd J0=Robot->J0_arm;
 	MatrixXd L0=Robot->L0_arm;
+	MatrixXd N0=Robot->N0_arm;
+	MatrixXd M=Robot->M_arm;
+	VectorXd dq_arm=Robot->dq.segment(3,7);
+
 
 
 	//compute nu of Vmax
@@ -370,10 +387,10 @@ void Controller::Arm_Local_Position_Orientation_controller(Vector3d goal_pos_in_
 	Vector3d pd_x = (-kv*(Robot->x_vel-nu*x_vel_des)); 
 	
 
-
+	//compute arm controller (7 joints)
 	//if rotation matrix is 0, only control position, else control position and orientation
 	if(R_des==MatrixXd::Zero(3,3)){
-		control_torques = Jv.transpose()* Lv*pd_x ;
+		arm_controller = Jv.transpose()* Lv*pd_x + N.transpose() *M *( - (kvj * dq_arm)) ;
 	}
 	else{
 		//find error in rotation
@@ -386,12 +403,21 @@ void Controller::Arm_Local_Position_Orientation_controller(Vector3d goal_pos_in_
 		pd << pd_x[0], pd_x[1], pd_x[2], pd_w[0], pd_w[1], pd_w[2];
 		VectorXd F(6);
 		F = Robot->L0 * pd;
- 		control_torques = J0.transpose() * F ;
-
-
+ 		arm_controller = J0.transpose() * F + N0.transpose() * M*( - (kvj *dq_arm) );
 	}
 
-	arm_torques= control_torques;
+	// //compute base controller to keep corrent position
+	Vector3d base_position;
+	base_position=Robot->base_position;
+
+	VectorXd q=Robot->q.segment(0,3);
+	VectorXd dq=Robot->dq.segment(0,3);
+	MatrixXd M_base=Robot->M.block(0,0,3,3);
+
+	base_controller=M_base*(- (kvj *dq) -kpj*(q-base_position));
+
+	control_torques<<base_controller(0),base_controller(1),base_controller(2),arm_controller(0),arm_controller(1),arm_controller(2),arm_controller(3),arm_controller(4),arm_controller(5),arm_controller(6),0.0,0.0;
+	Whole_body_controller=control_torques;
 };
 
 void Controller::Gripper_controller(double gripper_force){
@@ -443,11 +469,6 @@ void Controller::Base_controller(Vector3d Position=VectorXd::Zero(3),double Vmax
 		Whole_body_controller=Robot->M*(- (kvj *dq) -kpj*(q-q_des));
 	}
 
-	
-	
-	
-	
-
 };
 VectorXd Controller::Return_torques(){
 	/**
@@ -455,13 +476,17 @@ VectorXd Controller::Return_torques(){
 	 **/
 	VectorXd control_torques = VectorXd::Zero(Robot->dof);
 	
+	//inf force on gripper is 0, compute open gripper
+	if (finger_torques==VectorXd::Zero(2)){
+		Gripper_controller(0);
+	}
+
 	control_torques<<Whole_body_controller[0],Whole_body_controller[1],Whole_body_controller[2],Whole_body_controller[3],Whole_body_controller[4],Whole_body_controller[5],Whole_body_controller[6],Whole_body_controller[7],Whole_body_controller[8],Whole_body_controller[9],finger_torques[0],finger_torques[1];
 
+	
 		
 	//clear previos torque commands
-	arm_torques.setZero();
 	finger_torques.setZero();
-	base_torques.setZero();
 	Whole_body_controller.setZero();
 
 
@@ -685,6 +710,20 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 };
 
 
+//************Navigate to a point*****
+VectorXd Navigate_to_point(Controller *RobotController , Vector3d point_world, double V_max=0.0){
+	/**
+	 * Auxiliary function to navegate to a point,
+	 * gives the needed torques and perfr=orm other operations needed like log the last platform position.
+	 **/
+	Grocery_Robot* Robot=RobotController->Robot;
+	RobotController->Base_controller(point_world,V_max);
+	//upodate last position of the base
+	Robot->base_position<<Robot->q(0),Robot->q(1),Robot->q(2);
+	//send controller
+	return RobotController->Return_torques();
+}
+
 
 int main() {
 	//*************INITIALIZATION******************************
@@ -737,6 +776,8 @@ int main() {
 	Robot.dof = robot->dof();
 	Robot.HomePosition=VectorXd::Zero(Robot.dof);
 	Robot.HomePosition<<0.0,0.0,0.0, -0.798855 ,-0.328792, -0.001426 ,-0.006871, -0.000757, -0.053838 ,-0.000491 ,-0.039092, -0.119215;
+	Robot.Update_states();
+	Robot.base_position<<Robot.q(0),Robot.q(1),Robot.q(2);
 
 
 	//create robot object
@@ -756,8 +797,6 @@ int main() {
 	Controller RobotController;
 	RobotController.Robot=&Robot;
 	//start with 0 torques
-	RobotController.arm_torques=VectorXd::Zero(7);
-	RobotController.base_torques=VectorXd::Zero(3);
 	RobotController.finger_torques=VectorXd::Zero(2);
 	RobotController.Whole_body_controller=VectorXd::Zero(robot->dof()); 
 
@@ -806,6 +845,7 @@ fTimerDidSleep = timer.waitForNextLoop();
 
 		//neede variables for state machine
 		Vector3d Position;
+		double Nav_Vmax;
 
 		
 
@@ -819,7 +859,11 @@ fTimerDidSleep = timer.waitForNextLoop();
 		// 	break;
 		case Simulation_states::GO_TO_SHELF:
 			//aproach robot platform in front of the shelf
-			control_torques.setZero();
+			//move platform with arm in home position.
+			Position<<1.0,1.0,0.0;//this shoudl be the positon of the shelf
+			Nav_Vmax=0.5;//local maximum velocity
+			control_torques=Navigate_to_point(&RobotController , Position,Nav_Vmax);
+			//control_torques.setZero();
 			break;
 		case Simulation_states::PICK_SHELF_OBJECTS:
 			 switch (Robot.Current_state)
@@ -830,14 +874,23 @@ fTimerDidSleep = timer.waitForNextLoop();
 				//move to the next object
 				//Robot.set_robot_state(Robot_States::MOVING_ARM);
 				//control_torques=pick_shelf_objects(&RobotController,&Cup); //maybe pass object, to check object position?
-
+				//Arm_Local_Position_Orientation_controller(Vector3d goal_pos_in_base,Matrix3d R_des=Matrix3d::Zero(3,3), double Vmax=0.0)
 				
-				Position<<1.0,1.0,0.0;
-				RobotController.Base_controller(Position,0.5);
+				
+				
+				Position<<0.2,0.2,0.2;//this shoudl be the positon of the shelf
+				RobotController.Arm_Local_Position_Orientation_controller(Position);
 				control_torques=RobotController.Return_torques();
-				//cout<<control_torques<<endl;
-				cout<<Robot.q.transpose()<<endl;
 				
+
+			// 	Position<<1.0,1.0,0.0;//this shoudl be the positon of the shelf
+			// Nav_Vmax=0.5;//local maximum velocity
+			// control_torques=Navigate_to_point(&RobotController , Position,Nav_Vmax);
+
+
+				// cout<<control_torques.transpose()<<endl;
+				// cout<<Robot.q.transpose()<<endl;
+
 				
 
 				break;
