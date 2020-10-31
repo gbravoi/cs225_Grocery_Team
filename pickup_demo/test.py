@@ -41,12 +41,16 @@ const std::string OBJ_JOINT_ANGLES_KEY  = "cs225a::object::cup::sensors::q";
 const std::string OBJ_JOINT_VELOCITIES_KEY = "cs225a::object::cup::sensors::dq";
 // - write:
 const std::string JOINT_TORQUES_COMMANDED_KEY  = "cs225a::robot::panda::actuators::fgc";
-const std::string EE_FORCE_KEY_r = "cs225a::sensor::force2";
-const std::string EE_FORCE_KEY_l = "cs225a::sensor::force3";
-const std::string EE_FORCE_KEY_EEF = "cs225a::sensor::force1";
+const std::string EE_FORCE_KEY_r = "cs225a::sensor::force";
+const std::string EE_FORCE_KEY_l = "cs225a::sensor::force";
+const std::string EE_FORCE_KEY_eef = "cs225a::sensor::force";
 const std::string EE_MOMENT_KEY = "cs225a::sensor::moment";
 
-
+// manual object offset since the offset in world.urdf file since positionInWorld() doesn't account for this
+// Eigen::Vector3d obj_offset;
+// obj_offset << 0, -0.35, 0.544;
+// Eigen::Vector3d robot_offset;
+// robot_offset << 0.0, 0.3, 0.0;
 
 
 //state machine states
@@ -183,6 +187,7 @@ class Grocery_Robot{
 		void Update_states();
 		void Update_dynamics(bool world_coordinates);
 		void set_robot_state(Robot_States robot_state);
+		VectorXd World_Position_Orientation_controller(Vector3d goal_pos_in_world,Matrix3d R_des, double Vmax);
 		//bool checkWaypoints(MatrixXd& waypoints, int num_waypoints);
 };
 
@@ -244,6 +249,74 @@ void Grocery_Robot::set_robot_state(Robot_States robot_state){
 	Current_state=robot_state;
 	cout << "Current Robot State "<<  robot_state <<endl;
 };
+VectorXd Grocery_Robot::World_Position_Orientation_controller(Vector3d goal_pos_in_world,Matrix3d R_des=Matrix3d::Zero(3,3), double Vmax=0.0){
+	/**
+	 * takes the end effector to a position. 
+	 * can be performed at a reduced max velocity.
+	 * designed to move the robot arm to an object using world frame coordinates
+	 * If finger_force =0.0 the robot will be as open gripper.
+	 * Need update to do not move base
+**/
+	double kp=200.0;      // chose your p gain
+	double kv=30.0;      // chose your d gain
+	double kvj=14.0; //joint damping
+	double kpj=80.0; //joint p gain
+	double nu=1;
+	VectorXd control_torques;
+	Vector3d x_vel_des;
+	bool world_coordinates=true;
+	VectorXd q_des;
+	Vector3d delta_phi;
+
+	//update dynamics in world coordinates
+	Update_dynamics(world_coordinates);
+
+	//compute nu of Vmax
+	if(Vmax!=0){
+		x_vel_des = - kp / kv * (x_w - goal_pos_in_world);
+		nu = sat(Vmax / x_vel_des.norm());
+	}else{//else use robot restrictions
+		x_vel_des = - kp / kv * (x_w - goal_pos_in_world);
+		nu = sat(Vmax_robot / x_vel_des.norm());
+	}
+	//current velocity
+	Vector3d x_vel;
+	robot->linearVelocityInWorld(x_vel, link_name, pos_in_link);
+
+	//always control the gripper
+	q_des=q;//all other joints in current position
+	//Change end effector position to the desired position.
+	q_des(10)=open_finger;
+	q_des(11)=-1*open_finger;
+	
+
+	Vector3d pd_x = (-kv*(x_vel-nu*x_vel_des)); //(- kp * nu * (x_w - goal_pos_in_world));
+
+	//if rotation matrix is 0, only control position, else control position and orientation
+	if(R_des==MatrixXd::Zero(3,3)){
+		control_torques = Jv.transpose()* Lv*pd_x + N.transpose() *robot->_M *( - (kvj * dq)-kpj*(q-q_des)) + 0*g;  // gravity is compensated in simviz loop as of now
+	}else{
+		//find error in rotation
+		delta_phi = -0.5 * (R_w.col(0).cross(R_des.col(0)) + R_w.col(1).cross(R_des.col(1)) + R_w.col(2).cross(R_des.col(2)));
+
+		//get angular velocity in world coordinate
+		Vector3d w;//current angular velocity
+		robot->angularVelocityInWorld(w, link_name);
+
+		Vector3d pd_w = kp * (- delta_phi) - kv * w;
+		
+		VectorXd pd(6);
+		pd << pd_x[0], pd_x[1], pd_x[2], pd_w[0], pd_w[1], pd_w[2];
+		VectorXd F(6);
+		F = L0 * pd;
+ 		control_torques = J0.transpose() * F + N0.transpose() * robot->_M*( - (kvj *dq) -kpj*(q-q_des)) + 0*g;  // gravity is compensated in simviz loop as of now
+
+
+
+	}
+
+	return control_torques;
+}
 
 
 //#######Controllers####
@@ -258,7 +331,7 @@ class Controller{
 		VectorXd arm_torques;
 		Vector3d base_torques;
 		Vector2d finger_torques;
-		VectorXd Whole_body_controller; //used when robot is picking bjects
+		VectorXd Whole_body_controller=VectorXd::Zero(Robot->dof); //used when robot is picking objects
 		//control constant
 		double kp=200.0;      // chose your p gain
 		double kv=30.0;      // chose your d gain
@@ -312,7 +385,8 @@ void Controller::Arm_World_Position_Orientation_controller(Vector3d goal_pos_in_
 	}
 
 
-	q_des=q;//try to keep joints in current position
+	//always control the gripper
+	q_des=q;//all other joints in current position
 	
 
 	Vector3d pd_x = (-kv*(x_vel-nu*x_vel_des)); //(- kp * nu * (x_w - goal_pos_in_world));
@@ -335,6 +409,8 @@ void Controller::Arm_World_Position_Orientation_controller(Vector3d goal_pos_in_
 	}
 	Whole_body_controller=control_torques;
 };
+
+
 // void Controller::Arm_World_Position_Orientation_controller(Vector3d goal_pos_in_world,Matrix3d R_des=Matrix3d::Zero(3,3), double Vmax=0.0){
 // 	/**
 // 	 *Compute torke of the primary task to move the arm to a specific place in world frame.
@@ -411,7 +487,7 @@ void Controller::Gripper_controller(double gripper_force){
 	if (gripper_force==0){
 		finger_torques=- (kvj *dq) -kpj*(q-q_des);
 	}else{
-		finger_torques<<-gripper_force,gripper_force;
+		finger_torques<<gripper_force,-gripper_force;
 	}
 
 };
@@ -458,9 +534,8 @@ VectorXd Controller::Return_torques(){
 		control_torques=control_torques+damp_torque;
 		cout<<"partial control"<<endl;
 	}else{
-		//consider whole body controller and ad gripper torques
 		control_torques<<Whole_body_controller[0],Whole_body_controller[1],Whole_body_controller[2],Whole_body_controller[3],Whole_body_controller[4],Whole_body_controller[5],Whole_body_controller[6],Whole_body_controller[7],Whole_body_controller[8],Whole_body_controller[9],finger_torques[0],finger_torques[1];
-		//cout<<"whole body control"<< control_torques.transpose()<<endl;
+		cout<<"whole body control"<<endl;
 	}
 
 		
@@ -620,7 +695,7 @@ VectorXd Controller::Return_torques(){
 //-------State machine sub functions-----
 //---------------------------------------
 double pick_shelf_objects_counter=0;
-Vector3d ref_pos;//used when neede to keep the old position of the object
+Vector3d ref_pos;
 VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object){
 	
 	Grocery_Robot* Robot=RobotController->Robot;
@@ -636,7 +711,6 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 	Matrix3d R_w;
 	VectorXd force_r;
 	VectorXd force_l;
-	VectorXd force_ee;
 	Vector3d base_initial_pos;
 
 	
@@ -668,12 +742,16 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			//cout<<(target_pos-x_w).norm()<<endl;
 			//if reached postion, move to orient
 			if ((target_pos-x_w).norm()<=1e-1){
-				Robot->set_robot_state(Robot_States::ORIENTING_ARM);
+				//Robot->set_robot_state(Robot_States::ORIENTING_ARM);
 				control_torques.setZero();
+				ref_pos<< Object->x_w[0],Object->x_w[1],Object->x_w[2];
 			}else{//else move to position
-				RobotController->Arm_World_Position_Orientation_controller(target_pos);//control arm and platform, need both to ensure position
-				RobotController->Gripper_controller(0);//gripper open
-				control_torques=RobotController->Return_torques();
+				
+				//RobotController->Arm_World_Position_Orientation_controller(target_pos);//compute controller  arm torques
+				//RobotController->Gripper_controller(0);
+				//RobotController->Base_controller(base_initial_pos);//new position=false
+				//control_torques=RobotController->Return_torques();
+				control_torques=Robot->World_Position_Orientation_controller(target_pos);
 				
 			}
 			
@@ -686,22 +764,25 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			 * /We want the orientation be horizontal to the plane
 			 **/
 			//same target position as moving arm
-			target_pos<< Object->x_w[0],Object->x_w[1],Object->x_w[2];
-			target_pos(1)+=0.2;
+			target_pos=ref_pos;
+			target_pos(1)+=0.5;
 
 			//compute error in rotation
 			R_w=Robot->R_w;
 			delta_phi = -0.5 * (R_w.col(0).cross(R_des.col(0)) + R_w.col(1).cross(R_des.col(1)) + R_w.col(2).cross(R_des.col(2)));
 
 			//cout<< delta_phi.norm()<<endl;
-			//if oriented, move to aproacing object
+			//if oriente, move to aproacing stage
 			if (delta_phi.norm()<=1e-4){
 				Robot->set_robot_state(Robot_States::APROACHING_OBJECT);
+				ref_pos<< Object->x_w[0],Object->x_w[1],Object->x_w[2];
 				control_torques.setZero();
 			}else{
-				RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des);
-				RobotController->Gripper_controller(0);
-				control_torques=RobotController->Return_torques();
+				//RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des);//compute controller  arm torques
+				//RobotController->Gripper_controller(0);
+				//RobotController->Base_controller(base_initial_pos);//new position=false
+				//control_torques=RobotController->Return_torques();
+				control_torques=Robot->World_Position_Orientation_controller(target_pos,R_des);
 			}
 
 			break;
@@ -711,94 +792,96 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			/**
 			 * aproach object keeping gripper horizontal
 			 **/
-			target_pos<< Object->x_w[0],Object->x_w[1],Object->x_w[2];
-			force_ee=Robot->force_eef;
-			//cout<<force_ee.transpose()<<endl;
-			if ((force_ee).norm()>1e-5){//as soon it senses object, go next
-				Robot->set_robot_state(Robot_States::PICKING_OBJECT);
+			target_pos=Object->x_w;
+			//target_pos=ref_pos;
+			//target_pos(1)=ref_pos(1)-Object->width/2;//correct by the object width
+
+			//cout<<(target_pos-x_w).norm()<<endl;
+			cout<<"target"<<target_pos.transpose()<<endl;
+			cout<<"ee"<<x_w.transpose()<<endl;
+			//force_r=Robot->force_eef;
+			//cout<<force_r<<endl;
+			//if is near object, start closing the gripper
+			if ((target_pos-x_w).norm()<=control_threshold){
+				//Robot->set_robot_state(Robot_States::PICKING_OBJECT);
+				ref_pos<< Object->x_w[0],Object->x_w[1],Object->x_w[2];
 				control_torques.setZero();
 			}else{
-				//continue control to aproach
-				RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des,0.1);
-				RobotController->Gripper_controller(0);
-				control_torques=RobotController->Return_torques();
+				//RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des,0.2);//compute controller  arm torques
+				//RobotController->Base_controller(base_initial_pos);//new position=false
+				//RobotController->Gripper_controller(0);
+				//control_torques=RobotController->Return_torques();
+				control_torques=Robot->World_Position_Orientation_controller(target_pos,R_des, 0.2);
 			}
 
 			break;
 
 
 
-		case PICKING_OBJECT:
-			/**
-			 * Close grip to hold object
-			 **/
+		// case PICKING_OBJECT:
+		// 	/**
+		// 	 * Close grip to hold object
+		// 	 **/
 
 						
-			force_r=Robot->force_finger_r;
-			force_r=Robot->force_finger_l;
-			//cout<<"r:"<<force_r.norm()<<" l"<< force_l.norm()<<endl;
-			//cout<<Robot->q(11)<<endl;
+		// 	force_r=Robot->force_finger_r;
+		// 	force_r=Robot->force_finger_l;
+		// 	cout<<"r:"<<force_r.norm()<<" l"<< force_l.norm()<<endl;
+		// 	//cout<<Robot->q(11)<<endl;
 
-			//when force detected, hold for a momnet (counter time) then rise, and go next state
-			if(force_r.norm()>0.01 || force_l.norm()>0.01){
-				if (pick_shelf_objects_counter>2000){
-					//move a little up
-					target_pos=ref_pos;
-					cout<<"target"<<target_pos.transpose()<<endl;
-					//cout<<"current"<<x_w.transpose()<<endl;
-					target_pos(2)+=0.1;//this is the distance that will go up, latter replace depending on the shelf.
-					if ((target_pos-x_w).norm()<=control_threshold){
-						Robot->set_robot_state(Robot_States::MOVING_BACKWARDS);
-						RobotController->Arm_World_Position_Orientation_controller(ref_pos,R_des,0.1);
-						RobotController->Gripper_controller(force);//gripper will hold in the designated force
-						control_torques=RobotController->Return_torques();
-						ref_pos<< x_w[0],x_w[1],x_w[2];
-					}else{
-						RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des,0.1);
-						RobotController->Gripper_controller(force);//gripper will hold in the designated force
-						control_torques=RobotController->Return_torques();
-						
-					}
+		// 	//when force detected, hold for a momnet then rise, and go next state
+		// 	if(force_r.norm()>0.01 || force_l.norm()>0.01){
+		// 		if (pick_shelf_objects_counter>2000){
+		// 			//move a little up
+		// 			target_pos=ref_pos;
+		// 			target_pos(2)+=0.2;//this is hard code, hust to try
+		// 			if ((target_pos-x_w).norm()<=control_threshold){
+		// 				Robot->set_robot_state(Robot_States::MOVING_BACKWARDS);
+		// 				control_torques(11)=force;
+		// 				control_torques(10)=-force;
+		// 			}else{
+		// 				control_torques=Robot->World_Position_Orientation_controller(target_pos,R_des,0.1);
+		// 				control_torques(11)=force;
+		// 				control_torques(10)=-force;
+		// 			}
 
 				
-				}else{
-					pick_shelf_objects_counter+=1;
-					cout<< "counter "<< pick_shelf_objects_counter <<endl;
-					control_torques(11)=force;
-					control_torques(10)=-force;
-				}
-			}else{
-				//hold for a moment in current position holding the objetc
-				RobotController->Gripper_controller(force);//gripper will hold in the designated force
-				control_torques=RobotController->Return_torques();
-				//save current position as reference
-				ref_pos<< x_w[0],x_w[1],x_w[2];
+		// 		}else{
+		// 			pick_shelf_objects_counter+=1;
+		// 			cout<< "counter "<< pick_shelf_objects_counter <<endl;
+		// 			control_torques(11)=force;
+		// 			control_torques(10)=-force;
+		// 		}
+		// 	}else{
+		// 		control_torques=Robot->Only_Gripper_controller(false);
+		// 		control_torques(11)=force;
+		// 		control_torques(10)=-force;
 				
 
-			}
+		// 	}
 
-			break;
+		// 	break;
 
-		case MOVING_BACKWARDS:
-			/**
-			 * Close grip to hold object
-			 **/
-			//here must use a waypoint, should be the position in front of the shelf
-			target_pos=ref_pos;
-			target_pos(1)=-0.0;
+		// case MOVING_BACKWARDS:
+		// 	/**
+		// 	 * Close grip to hold object
+		// 	 **/
+		// 	//here must use a waypoint?
+		// 	target_pos=Robot->x_w;
+		// 	target_pos(1)=-0.0;
 						
-			if ((target_pos-x_w).norm()<=control_threshold){
-				//Robot->set_robot_state(Robot_States::MOVING_BACKWARDS);
-				RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des,0.1);
-				RobotController->Gripper_controller(force);//gripper will hold in the designated force
-				control_torques=RobotController->Return_torques();
-			}else{
-				RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des,0.1);
-				RobotController->Gripper_controller(force);//gripper will hold in the designated force
-				control_torques=RobotController->Return_torques();
-			}
+		// 	if ((target_pos-x_w).norm()<=control_threshold){
+		// 		//Robot->set_robot_state(Robot_States::MOVING_BACKWARDS);
+		// 		control_torques.setZero();
+		// 		control_torques(11)=force;
+		// 		control_torques(10)=-force;
+		// 	}else{
+		// 		control_torques=Robot->World_Position_Orientation_controller(target_pos,R_des,0.1);
+		// 		control_torques(11)=force;
+		// 		control_torques(10)=-force;
+		// 	}
 
-			break;
+		// 	break;
 
 
 		case PLACING_OBJECT:
@@ -895,11 +978,6 @@ int main() {
 	//start robot controller
 	Controller RobotController;
 	RobotController.Robot=&Robot;
-	//start with 0 torques
-	RobotController.arm_torques=VectorXd::Zero(7);
-	RobotController.base_torques=VectorXd::Zero(3);
-	RobotController.finger_torques=VectorXd::Zero(2);
-	RobotController.Whole_body_controller=VectorXd::Zero(robot->dof()); 
 
 
 
@@ -933,7 +1011,7 @@ fTimerDidSleep = timer.waitForNextLoop();
 		//update force sensor
 		Robot.force_finger_r=redis_client.getEigenMatrixJSON(EE_FORCE_KEY_r);
 		Robot.force_finger_l=redis_client.getEigenMatrixJSON(EE_FORCE_KEY_l);
-		Robot.force_eef=redis_client.getEigenMatrixJSON(EE_FORCE_KEY_EEF);
+		Robot.force_eef=redis_client.getEigenMatrixJSON(EE_FORCE_KEY_eef);
 
 
 		// update robot information (position orientation)
