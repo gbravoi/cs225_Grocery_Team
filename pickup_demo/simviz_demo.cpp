@@ -51,7 +51,7 @@ ForceSensorSim* force_sensor;
 ForceSensorDisplay* force_display;
 
 // simulation thread
-void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simulation::Sai2Simulation* sim, UIForceWidget *ui_force_widget);
+void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim, UIForceWidget *ui_force_widget);
 
 // callback to print glfw errors
 void glfwError(int error, const char* description);
@@ -105,15 +105,15 @@ int main() {
 	robot->updateModel();
 
 	// load robot objects
-	auto object = new Sai2Model::Sai2Model(obj_file, false);
+	//auto object = new Sai2Model::Sai2Model(obj_file, false);
 	// object->_q(0) = 0.60;
 	// object->_q(1) = -0.35;
-	object->updateModel();
+	//object->updateModel();
 
 	// load simulation world
 	auto sim = new Simulation::Sai2Simulation(world_file, false);
 	sim->setJointPositions(robot_name, robot->_q);
-	sim->setJointPositions(obj_name, object->_q);
+	//sim->setJointPositions(obj_name, object->_q);
 
     // set co-efficient of restition to zero for force control
     // see issue: https://github.com/manips-sai/sai2-simulation/issues/1
@@ -170,11 +170,11 @@ int main() {
 	// init redis client values 
 	redis_client.setEigenMatrixJSON(JOINT_ANGLES_KEY, robot->_q); 
 	redis_client.setEigenMatrixJSON(JOINT_VELOCITIES_KEY, robot->_dq); 
-	redis_client.setEigenMatrixJSON(OBJ_JOINT_ANGLES_KEY, object->_q); 
-	redis_client.setEigenMatrixJSON(OBJ_JOINT_VELOCITIES_KEY, object->_dq); 
+	//redis_client.setEigenMatrixJSON(OBJ_JOINT_ANGLES_KEY, object->_q); 
+	//redis_client.setEigenMatrixJSON(OBJ_JOINT_VELOCITIES_KEY, object->_dq); 
 
 	// start simulation thread
-	thread sim_thread(simulation, robot, object, sim, ui_force_widget);
+	thread sim_thread(simulation, robot, sim, ui_force_widget);
 
 	// initialize glew
 	glewInitialize();
@@ -186,7 +186,7 @@ int main() {
 		int width, height;
 		glfwGetFramebufferSize(window, &width, &height);
 		graphics->updateGraphics(robot_name, robot);
-		graphics->updateGraphics(obj_name, object);
+		//graphics->updateGraphics(obj_name, object);
 		force_display->update();
 		graphics->render(camera_name, width, height);
 
@@ -303,7 +303,7 @@ int main() {
 
 //------------------------------------------------------------------------------
 
-void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simulation::Sai2Simulation* sim, UIForceWidget *ui_force_widget)
+void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim, UIForceWidget *ui_force_widget)
 {
 	// prepare simulation
 	int dof = robot->dof();
@@ -382,9 +382,9 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simul
 		sim->getJointVelocities(robot_name, robot->_dq);
 		robot->updateModel();
 
-		sim->getJointPositions(obj_name, object->_q);
-		sim->getJointVelocities(obj_name, object->_dq);
-		object->updateModel();
+		//sim->getJointPositions(obj_name, object->_q);
+		//sim->getJointVelocities(obj_name, object->_dq);
+		//object->updateModel();
 
 		// update force sensor readings
 		force_sensor->update(sim);
@@ -394,7 +394,7 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simul
 		// std::cout << "Sensed Force: " << sensed_force.transpose() << "Sensed Moment: " << sensed_moment.transpose() << std::endl;
 
         // query object position and ee pos/ori for camera detection 
-		object->positionInWorld(obj_pos, "link6");
+		//object->positionInWorld(obj_pos, "link6");
 		robot->positionInWorld(camera_pos, "link7");
 		robot->rotationInWorld(camera_ori, "link7");  // local to world frame 
 
@@ -420,8 +420,8 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simul
 		// shown explicitly here, but you can define a helper function to publish data 
 		redis_data.at(2) = std::pair<string, string>(JOINT_ANGLES_KEY, redis_client.encodeEigenMatrixJSON(robot->_q));
 		redis_data.at(3) = std::pair<string, string>(JOINT_VELOCITIES_KEY, redis_client.encodeEigenMatrixJSON(robot->_dq));
-		redis_data.at(4) = std::pair<string, string>(OBJ_JOINT_ANGLES_KEY, redis_client.encodeEigenMatrixJSON(object->_q));
-		redis_data.at(5) = std::pair<string, string>(OBJ_JOINT_VELOCITIES_KEY, redis_client.encodeEigenMatrixJSON(object->_dq));
+		//redis_data.at(4) = std::pair<string, string>(OBJ_JOINT_ANGLES_KEY, redis_client.encodeEigenMatrixJSON(object->_q));
+		//redis_data.at(5) = std::pair<string, string>(OBJ_JOINT_VELOCITIES_KEY, redis_client.encodeEigenMatrixJSON(object->_dq));
 		redis_data.at(6) = std::pair<string, string>(CAMERA_POS_KEY, redis_client.encodeEigenMatrixJSON(camera_pos));
 		redis_data.at(7) = std::pair<string, string>(CAMERA_ORI_KEY, redis_client.encodeEigenMatrixJSON(camera_ori));
 		redis_data.at(8) = std::pair<string, string>(EE_FORCE_KEY, redis_client.encodeEigenMatrixJSON(sensed_force));
