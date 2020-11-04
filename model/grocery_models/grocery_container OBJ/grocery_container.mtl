@@ -1,0 +1,12 @@
+# Blender MTL File: 'grocery_container.blend'
+# Material Count: 1
+
+newmtl 1
+Ns 600.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.792157 0.819608 0.933333
+Ks 0.424183 0.424183 0.424183
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
