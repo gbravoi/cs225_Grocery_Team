@@ -11,12 +11,15 @@
 	<robot name="jar1">
 		<model dir="./resources" path="jar.urdf" name="jar" />
 		<origin xyz="0.0 -0.65 0.6" rpy="0 0 0" />
+		<!--<origin xyz="0.3 0.3 0.6" rpy="0 0 0" />-->
 	</robot>
 
 	<robot name="shelf1">
 		<model dir="./resources" path="shelf.urdf" name="shelf" />
 		<origin xyz="0.0 -0.3 0.0" rpy="0 0 0" />
 	</robot>
+
+
 
 
 	<static_object name="Ground_With_Texture">
