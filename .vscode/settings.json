@@ -5,6 +5,7 @@
         "complex": "cpp",
         "new": "cpp",
         "core": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "thread": "cpp"
     }
 }

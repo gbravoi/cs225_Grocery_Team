@@ -22,13 +22,15 @@ using namespace Eigen;
 const string world_file = "./resources/world.urdf";
 const string robot_file = "./resources/mmp_panda.urdf";
 
-const string robot_name = "mmp_panda";
-const string obj_name = "jar1"; 
+const string robot_name = "mmp_panda"; 
 const string camera_name = "camera_fixed";
 const string ee_link_name = "link7";
 
-//MOD FOR SEVERAL OBJECTS
+//MOD FOR SEVERAL OBJECT
+const string obj_name = "jar1";
 const string obj_file = "./resources/jar.urdf";
+const string basket_name = "jar2";
+const string basket_file = "./resources/jar.urdf";
 
 RedisClient redis_client;
 
@@ -45,9 +47,11 @@ const std::string EE_FORCE_KEY_r = "cs225a::sensor::force2";
 const std::string EE_FORCE_KEY_l = "cs225a::sensor::force3";
 const std::string EE_MOMENT_KEY = "cs225a::sensor::moment";
 
-//MOD FOR SEVERAL OBJECTS
+//MOD FOR SEVERAL OBJECT
 const std::string OBJ_JOINT_ANGLES_KEY  = "cs225a::object::cup::sensors::q";
 const std::string OBJ_JOINT_VELOCITIES_KEY = "cs225a::object::cup::sensors::dq";
+const std::string BASKET_JOINT_ANGLES_KEY  = "cs225a::object::basket::sensors::q";
+const std::string BASKET_JOINT_VELOCITIES_KEY = "cs225a::object::basket::sensors::dq";
 
 // - read:
 const std::string JOINT_TORQUES_COMMANDED_KEY  = "cs225a::robot::panda::actuators::fgc";
@@ -62,7 +66,7 @@ ForceSensorDisplay* force_display;
 
 //MOD FOR SEVERAL OBJECT
 // simulation thread
-void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simulation::Sai2Simulation* sim, UIForceWidget *ui_force_widget);
+void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object,Sai2Model::Sai2Model* basket, Simulation::Sai2Simulation* sim, UIForceWidget *ui_force_widget);
 
 // callback to print glfw errors
 void glfwError(int error, const char* description);
@@ -110,6 +114,7 @@ int main() {
 	graphics->getCameraPose(camera_name, camera_pos, camera_vertical, camera_lookat);
 	graphics->showLinkFrame(true, robot_name, ee_link_name, 0.18);  // robot link 7 frame
 	graphics->showLinkFrame(true, obj_name, "link6", 0.15);  // cup frame
+	//graphics->showLinkFrame(true, basket_name, "basket_wall1", 0.15);  // cup frame
 
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
@@ -121,9 +126,9 @@ int main() {
 	//MOD FOR SEVERAL OBJECT
 	// load robot objects
 	auto object = new Sai2Model::Sai2Model(obj_file, false);
-	//object->_q(0) = 0.10;
-	//object->_q(1) = -0.35;
 	object->updateModel();
+	auto basket = new Sai2Model::Sai2Model(basket_file, false);
+	basket->updateModel();
 
 	// load simulation world
 	auto sim = new Simulation::Sai2Simulation(world_file, false);
@@ -131,6 +136,7 @@ int main() {
 	
 	//MOD FOR SEVERAL OBJECT
 	sim->setJointPositions(obj_name, object->_q);
+	sim->setJointPositions(basket_name, basket->_q);
 
     // set co-efficient of restition to zero for force control
     // see issue: https://github.com/manips-sai/sai2-simulation/issues/1
@@ -193,9 +199,12 @@ int main() {
 	//MOD FOR SEVERAL OBJECT
 	redis_client.setEigenMatrixJSON(OBJ_JOINT_ANGLES_KEY, object->_q); 
 	redis_client.setEigenMatrixJSON(OBJ_JOINT_VELOCITIES_KEY, object->_dq); 
+	redis_client.setEigenMatrixJSON(BASKET_JOINT_ANGLES_KEY, basket->_q); 
+	redis_client.setEigenMatrixJSON(BASKET_JOINT_VELOCITIES_KEY, basket->_dq); 
 
+	//MOD FOR SEVERAL OBJECT
 	// start simulation thread
-	thread sim_thread(simulation, robot, object, sim, ui_force_widget);
+	thread sim_thread(simulation, robot, object,basket, sim, ui_force_widget);
 
 	// initialize glew
 	glewInitialize();
@@ -212,6 +221,7 @@ int main() {
 
 		//MOD FOR SEVERAL OBJECT
 		graphics->updateGraphics(obj_name, object);
+		graphics->updateGraphics(basket_name, basket);
 
 		// swap buffers
 		glfwSwapBuffers(window);
@@ -327,7 +337,7 @@ int main() {
 //------------------------------------------------------------------------------
 
 //MOD FOR SEVERAL OBJECT
-void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simulation::Sai2Simulation* sim, UIForceWidget *ui_force_widget)
+void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Sai2Model::Sai2Model* basket, Simulation::Sai2Simulation* sim, UIForceWidget *ui_force_widget)
 {
 	// prepare simulation
 	int dof = robot->dof();
@@ -371,8 +381,9 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simul
 	const std::string true_message = "Detected";
 	const std::string false_message = "Not Detected";
 
+	//MOD FOR SEVERAL OBJECT
 	// setup redis client data container for pipeset (batch write)
-	std::vector<std::pair<std::string, std::string>> redis_data(12);  // set with the number of keys to write 
+	std::vector<std::pair<std::string, std::string>> redis_data(14);  // set with the number of keys to write 
 
 	// setup white noise generator
     const double mean = 0.0;
@@ -413,6 +424,9 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simul
 		sim->getJointPositions(obj_name, object->_q);
 		sim->getJointVelocities(obj_name, object->_dq);
 		object->updateModel();
+		sim->getJointPositions(basket_name, basket->_q);
+		sim->getJointVelocities(basket_name, basket->_dq);
+		basket->updateModel();
 
 		// update force sensor readings
 		force_sensor_eef->update(sim);
@@ -465,6 +479,8 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Simul
 		//MOD FOR SEVERAL OBJECT
 		redis_data.at(4) = std::pair<string, string>(OBJ_JOINT_ANGLES_KEY, redis_client.encodeEigenMatrixJSON(object->_q));
 		redis_data.at(5) = std::pair<string, string>(OBJ_JOINT_VELOCITIES_KEY, redis_client.encodeEigenMatrixJSON(object->_dq));
+		redis_data.at(12) = std::pair<string, string>(BASKET_JOINT_ANGLES_KEY, redis_client.encodeEigenMatrixJSON(basket->_q));
+		redis_data.at(13) = std::pair<string, string>(BASKET_JOINT_VELOCITIES_KEY, redis_client.encodeEigenMatrixJSON(basket->_dq));
 
 
 

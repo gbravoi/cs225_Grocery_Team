@@ -37,8 +37,6 @@ const string robot_name = "mmp_panda";
 // - read:
 const std::string JOINT_ANGLES_KEY  = "cs225a::robot::panda::sensors::q";
 const std::string JOINT_VELOCITIES_KEY = "cs225a::robot::panda::sensors::dq";
-const std::string OBJ_JOINT_ANGLES_KEY  = "cs225a::object::cup::sensors::q";
-const std::string OBJ_JOINT_VELOCITIES_KEY = "cs225a::object::cup::sensors::dq";
 // - write:
 const std::string JOINT_TORQUES_COMMANDED_KEY  = "cs225a::robot::panda::actuators::fgc";
 const std::string EE_FORCE_KEY_r = "cs225a::sensor::force2";
@@ -46,6 +44,9 @@ const std::string EE_FORCE_KEY_l = "cs225a::sensor::force3";
 const std::string EE_FORCE_KEY_EEF = "cs225a::sensor::force1";
 const std::string EE_MOMENT_KEY = "cs225a::sensor::moment";
 
+//MOD FOR SEVERAL OBJECTS
+const std::string OBJ_JOINT_ANGLES_KEY  = "cs225a::object::cup::sensors::q";
+const std::string OBJ_JOINT_VELOCITIES_KEY = "cs225a::object::cup::sensors::dq";
 
 
 
@@ -888,7 +889,9 @@ fTimerDidSleep = timer.waitForNextLoop();
 			Position<<1.0,1.0,0.0;//this shoudl be the positon of the shelf
 			Nav_Vmax=0.5;//local maximum velocity
 			control_torques=Navigate_to_point(&RobotController , Position,Nav_Vmax);
-
+			// Robot.Update_dynamics();
+			// cout<<"M"<<endl;
+			// cout<<Robot.M<<endl;
 			break;
 
 
