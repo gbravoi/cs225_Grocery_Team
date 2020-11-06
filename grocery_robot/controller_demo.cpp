@@ -1,13 +1,12 @@
 #include <Sai2Model.h>
 #include "redis/RedisClient.h"
 #include "timer/LoopTimer.h"
-
-
 #include <iostream>
 #include <string>
 
 using namespace std;
 using namespace Eigen;
+
 
 #include <signal.h>
 bool runloop = false;
@@ -67,6 +66,35 @@ enum Robot_States {
 	PLACING_OBJECT,
 	NAVIGATING};
 
+std::ostream& operator<<(std::ostream& out, const Robot_States value){
+    const char* s = 0;
+#define PROCESS_VAL(p) case(p): s = #p; break;
+    switch(value){
+        PROCESS_VAL(R_IDLE);
+        PROCESS_VAL(MOVING_ARM);
+				PROCESS_VAL(ORIENTING_ARM);
+				PROCESS_VAL(APROACHING_OBJECT);
+				PROCESS_VAL(PICKING_OBJECT);
+				PROCESS_VAL(MOVING_BACKWARDS);
+				PROCESS_VAL(PLACING_OBJECT);
+				PROCESS_VAL(NAVIGATING);
+    }
+#undef PROCESS_VAL
+    return out << s;
+}
+std::ostream& operator<<(std::ostream& out, const Simulation_states value){
+    const char* s = 0;
+#define PROCESS_VAL(p) case(p): s = #p; break;
+    switch(value){
+        PROCESS_VAL(IDLE);
+        PROCESS_VAL(GO_TO_SHELF);
+				PROCESS_VAL(PICK_SHELF_OBJECTS);
+				PROCESS_VAL(GO_TO_CONVEYOR);
+				PROCESS_VAL(PLACE_OBJECS_CONVEYOR);
+    }
+#undef PROCESS_VAL
+    return out << s;
+}
 //------------------------------------------
 //-------------CLASSES DEFINITION-----------
 //------------------------------------------
@@ -600,9 +628,7 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 				RobotController->Arm_World_Position_Orientation_controller(target_pos);//control arm and platform, need both to ensure position
 				RobotController->Gripper_controller(0);//gripper open
 				control_torques=RobotController->Return_torques();
-
 			}
-
 			break;
 		case ORIENTING_ARM:
 			/**
@@ -637,7 +663,7 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			force_ee=Robot->force_eef;
 			//cout<<force_ee.transpose()<<endl;
 			if ((force_ee).norm()>1e-5){//as soon it senses object, go next
-				Robot->set_robot_state(Robot_States::PICKING_OBJECT);
+				Robot->set_robot_state(Robot_States::MOVING_BACKWARDS);
 				control_torques.setZero();
 			}else{
 				//continue control to aproach
@@ -697,7 +723,9 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			//here must use a waypoint, should be the position in front of the shelf
 			target_pos=point_in_front_shelf;
 			target_pos(2)=ref_pos(2);//keep same height
-
+			cout<<target_pos<<" target"<<endl;
+			cout<<x_w<<" world"<<endl;
+			cout<<(target_pos-x_w).norm()<<"EFWEF"<<endl;
 			if ((target_pos-x_w).norm()<=control_threshold){
 				Robot->set_robot_state(Robot_States::PLACING_OBJECT);
 				RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des,0.1);
@@ -712,7 +740,6 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			break;
 		case PLACING_OBJECT:
 			//placing object in the basket. Follow waypoints in base frame
-			// arrived=Robot->checkWaypoints(Robot->basket_to_shelf_waypoints, 5);
 			arrived=Robot->checkWaypoints(Robot->home_to_basket_waypoints, 3, 1);
 			target_pos = Robot->next_waypoint_ee;
 			if(arrived){
@@ -800,8 +827,8 @@ int main() {
 	Robot.basket_to_shelf_waypoints.transposeInPlace();
 	Robot.navigation_waypoints = MatrixXd(3,3);
 	Robot.navigation_waypoints<<1.0,1.0,0.0,
-	0.0,1.0,1.5,
-	0.0,3.0,0.0;
+	1.0,1.0,0.0;
+	1.0,1.0,0.0;
 	Robot.navigation_waypoints.transposeInPlace();
 
 	// Robot.home_to_basket_waypoints = MatrixXd(3,3);
@@ -811,7 +838,6 @@ int main() {
 	// Robot.home_to_basket_waypoints.transposeInPlace();
 	Robot.waypoint_iterator = -1;
 	Robot.Current_state=Robot_States::NAVIGATING;
-
 
 	//start robot controller
 	Controller RobotController;
