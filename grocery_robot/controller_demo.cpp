@@ -179,12 +179,11 @@ class Grocery_Robot{
 
 		//time, waypoints
 		double cur_time;
-		MatrixXd basket_to_shelf_waypoints;
 		MatrixXd home_to_basket_waypoints;
 		MatrixXd navigation_waypoints;
 		double last_waypoint_arrival_time;
 		int waypoint_iterator=-1;
-		Vector3d next_waypoint_ee;
+		VectorXd next_waypoint_ee;
 		Vector3d next_waypoint_base;
 		double Vmax_robot=0.5; //max velocity
 
@@ -193,6 +192,11 @@ class Grocery_Robot{
 		const string link_name = "link7";
 		const Vector3d pos_in_link = Vector3d(0, 0, 0.15);//0.18 distance to touch base of the grip.
 		const Vector3d robot_offset=Vector3d(0.0,0.3,0.15);//offset in world, given by world urdf
+		const VectorXd home_q = (VectorXd(7)<<-1.5,0.0,0.0,-0.707,0.0,0.707,0.707).finished();
+		const VectorXd basket_top_q = (VectorXd(7)<<-1.5,-1.2,0.0,-3.0,0.0,1.8,0.707).finished();
+		// VectorXd basket_top_q = VectorXd(7);
+		// home_q << 0.0,0.0,0.0,0.0,0.0,0.0,0.0;//ee home in robot coordinate
+		// basket_top_q << 0.1,0.1,0.1,0.1,0.1,0.1,0.1;//ee home in robot coordinate
 		VectorXd force_finger_r;//measure force by sensor
 		VectorXd force_finger_l;//measured force by sensor
 		VectorXd force_eef;//force in the link 7 of the end effector
@@ -203,6 +207,7 @@ class Grocery_Robot{
 		void Update_states();
 		void Update_dynamics(bool world_coordinates);
 		void set_robot_state(Robot_States robot_state);
+		void generate_to_basket_waypoints();
 		bool checkWaypoints(MatrixXd& waypoints, int num_waypoints, bool ee);
 };
 
@@ -216,12 +221,9 @@ void Grocery_Robot::Update_states(){
 	x_w+=robot_offset;//add offset
 	robot->rotation(R, link_name);
 	robot->rotationInWorld(R_w, link_name);
-
-
-
  };
 
- void Grocery_Robot::Update_dynamics(bool world_coordinates=false){
+void Grocery_Robot::Update_dynamics(bool world_coordinates=false){
 	// update robot model and compute gravity, and other stuff
 	robot->updateModel();
 	robot->gravityVector(g);
@@ -266,10 +268,21 @@ void Grocery_Robot::Update_states(){
 
  };
 
+void Grocery_Robot::generate_to_basket_waypoints(){
+	// home_to_basket_waypoints.col(0) = (home_q+q.segment(3,7))/2;
+	home_to_basket_waypoints.col(0) = home_q;
+	home_to_basket_waypoints.col(1) = basket_top_q;
+	// home_to_basket_waypoints.col(1) = (home_q+basket_top_q)/2;
+	home_to_basket_waypoints.col(2) = basket_top_q;
+};
+
 void Grocery_Robot::set_robot_state(Robot_States robot_state){
 	//function that update robot state, help to print current robot state to keep track
 	Current_state=robot_state;
 	cout << "Current Robot State "<<  robot_state <<endl;
+	if(robot_state==Robot_States::PLACING_OBJECT){
+		generate_to_basket_waypoints();
+	}
 };
 bool Grocery_Robot::checkWaypoints(MatrixXd& waypoints, int num_waypoints, bool ee){
 	/**
@@ -288,7 +301,7 @@ bool Grocery_Robot::checkWaypoints(MatrixXd& waypoints, int num_waypoints, bool 
 	}
 	Vector3d dist;
 	if(ee){
-		dist = x-waypoints.col(waypoint_iterator);
+		dist = q-waypoints.col(waypoint_iterator);
 	}else{
 		dist = base_position-waypoints.col(waypoint_iterator);
  	}
@@ -333,6 +346,7 @@ class Controller{
 		//functions declaration
 		void Arm_World_Position_Orientation_controller(Vector3d goal_pos_in_world,Matrix3d R_des, double Vmax);
 		void Arm_Local_Position_Orientation_controller(Vector3d goal_pos_in_base,Matrix3d R_des, double Vmax);
+		void Arm_Joint_controller(VectorXd q_des);
 		void Gripper_controller(double gripper_force);
 		void Base_controller(Vector3d Position,double Vmax);
 		VectorXd Return_torques();
@@ -473,6 +487,29 @@ void Controller::Arm_Local_Position_Orientation_controller(Vector3d goal_pos_in_
 	control_torques<<base_controller(0),base_controller(1),base_controller(2),arm_controller(0),arm_controller(1),arm_controller(2),arm_controller(3),arm_controller(4),arm_controller(5),arm_controller(6),0.0,0.0;
 	Whole_body_controller=control_torques;
 };
+void Controller::Arm_Joint_controller(VectorXd q_des){
+	/**
+	 *Joint position PD controller
+	 **/
+	Robot->Update_dynamics();//update in base coordinates
+	VectorXd control_torques=VectorXd::Zero(Robot->dof);
+	VectorXd arm_controller;
+	VectorXd base_controller;
+	MatrixXd M_base=Robot->M.block(0,0,3,3);
+	//update dynamics in world coordinates
+	VectorXd dq_arm=Robot->dq.segment(3,7);
+	//compute arm controller (7 joints)
+	VectorXd q_arm=Robot->q.segment(3,7);
+	arm_controller = -400.0*(q_arm-q_des)-55.0*dq_arm;
+	// //compute base controller to keep corrent position
+	Vector3d base_position;
+	base_position=Robot->base_position;
+	VectorXd q_base=Robot->q.segment(0,3);
+	VectorXd dq_base=Robot->dq.segment(0,3);
+	base_controller=M_base*(- (kvj *dq_base) -kpj*(q_base-base_position));
+	control_torques<<base_controller(0),base_controller(1),base_controller(2),arm_controller(0),arm_controller(1),arm_controller(2),arm_controller(3),arm_controller(4),arm_controller(5),arm_controller(6),0.0,0.0;
+	Whole_body_controller=control_torques;
+};
 
 void Controller::Gripper_controller(double gripper_force){
 	/**
@@ -578,12 +615,14 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 	Grocery_Robot* Robot=RobotController->Robot;
 	VectorXd control_torques= VectorXd::Zero(Robot->dof);
 	double control_threshold=0.07;
+	// double control_threshold=0.9;
 	bool arrived = false;
 	Vector3d target_pos;
 	Vector3d x_w;
 	Vector3d delta_phi;
 	Matrix3d R_des;
 	Matrix3d R_w;
+	VectorXd target_q;
 	VectorXd force_r;
 	VectorXd force_l;
 	VectorXd force_ee;
@@ -723,9 +762,9 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			//here must use a waypoint, should be the position in front of the shelf
 			target_pos=point_in_front_shelf;
 			target_pos(2)=ref_pos(2);//keep same height
-			cout<<target_pos<<" target"<<endl;
-			cout<<x_w<<" world"<<endl;
-			cout<<(target_pos-x_w).norm()<<"EFWEF"<<endl;
+			// cout<<target_pos<<" target"<<endl;
+			// cout<<x_w<<" world"<<endl;
+			// cout<<(target_pos-x_w).norm()<<"EFWEF"<<endl;
 			if ((target_pos-x_w).norm()<=control_threshold){
 				Robot->set_robot_state(Robot_States::PLACING_OBJECT);
 				RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des,0.1);
@@ -741,21 +780,20 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 		case PLACING_OBJECT:
 			//placing object in the basket. Follow waypoints in base frame
 			arrived=Robot->checkWaypoints(Robot->home_to_basket_waypoints, 3, 1);
-			target_pos = Robot->next_waypoint_ee;
+			target_q = Robot->next_waypoint_ee;
 			if(arrived){
-					Robot->set_robot_state(Robot_States::R_IDLE);
-					control_torques.setZero();
+					// Robot->set_robot_state(Robot_States::R_IDLE);
+					// control_torques.setZero();
 			}else{
-				if((target_pos-x_w).norm()>control_threshold){
-					RobotController->Arm_Local_Position_Orientation_controller(target_pos);
+					RobotController->Arm_Joint_controller(target_q);
 					RobotController->Gripper_controller(force);//gripper will hold in the designated force
 					control_torques=RobotController->Return_torques();
-				}
 			}
+			// cout<<control_torques<<endl;
 			break;
-		default:
-			control_torques.setZero();
-			break;
+		// default:
+		// 	control_torques.setZero();
+		// 	break;
 		}
 	return control_torques;
 };
@@ -818,27 +856,16 @@ int main() {
 	//create robot object
 	Robot.cur_time = timer.elapsedTime();
 	//initialize waypoints
-	Robot.basket_to_shelf_waypoints = MatrixXd(5,3);
-	Robot.basket_to_shelf_waypoints<< 0.5,0.5,0.5,
-	0.8,0.8,0.8,
-	-0.2,-0.2,0.5,
-	1.5,1.0,0.5,
-	-1.0,0.5,0.8;
-	Robot.basket_to_shelf_waypoints.transposeInPlace();
 	Robot.navigation_waypoints = MatrixXd(3,3);
-	Robot.navigation_waypoints<<1.0,1.0,0.0,
-	1.0,1.0,0.0;
-	1.0,1.0,0.0;
+	Robot.navigation_waypoints<<0.0,0.0,0.0,
+	0.0,0.0,0.0,
+	0.0,0.0,0.0;
 	Robot.navigation_waypoints.transposeInPlace();
 
-	// Robot.home_to_basket_waypoints = MatrixXd(3,3);
-	// Robot.home_to_basket_waypoints<< 0.5,0.5,0.5,
-	// 0.8,0.8,0.8,
-	// -1.0,0.5,0.8;
-	// Robot.home_to_basket_waypoints.transposeInPlace();
+	Robot.home_to_basket_waypoints = MatrixXd(7,3);
 	Robot.waypoint_iterator = -1;
-	Robot.Current_state=Robot_States::NAVIGATING;
-
+	// Robot.Current_state=Robot_States::NAVIGATING;
+	Robot.set_robot_state(Robot_States::PLACING_OBJECT);
 	//start robot controller
 	Controller RobotController;
 	RobotController.Robot=&Robot;
@@ -946,7 +973,6 @@ fTimerDidSleep = timer.waitForNextLoop();
 		}
 
 		//Compute controller
-
 		redis_client.setEigenMatrixJSON(JOINT_TORQUES_COMMANDED_KEY, control_torques);
 
 		counter++;
