@@ -8,14 +8,18 @@
 		<origin xyz="0.0 0.3 0.15" rpy="0 0 0" />
 	</robot>
 
-	<!--if change position on tipe of the object, it need to change the ofset,dimensions and shelf in the controller-->
+	<!--if change position on tipe of the object, it need to change the ofset,dimensions and shelf in the controller and simviz-->
 	<robot name="jar1">
 		<model dir="./resources" path="jar.urdf" name="jar" />
 		<origin xyz="0.0 -0.4 0.7" rpy="0 0 0" />
 	</robot>
 	<robot name="jar2">
 		<model dir="./resources" path="jar.urdf" name="jar" />
-		<origin xyz="0.0 -0.65 0.2" rpy="0 0 0" />
+		<origin xyz="-0.4 -0.4 0.41" rpy="0 0 0" />
+	</robot>
+	<robot name="jar3">
+		<model dir="./resources" path="jar.urdf" name="jar" />
+		<origin xyz="0.4 -0.4 1.0" rpy="0 0 0" />
 	</robot>
 
 
@@ -26,10 +30,14 @@
 		<!--<origin xyz="0.0 0.8 0.0" rpy="0 0 3.14" />--><!--facing the other direction-->
 	</robot>
 
-	<!--<robot name="basket">
-		<model dir="./resources" path="basket.urdf" name="basket" />
-		<origin xyz="0.15 0.3 0.3" rpy="0 0 0" />
-	</robot>-->
+
+	<!--while we dont have basket with right properties, i will place a jar here-->
+	<robot name="basket">
+		<model dir="./resources" path="jar.urdf" name="basket" />
+		<!--<model dir="./resources" path="basket.urdf" name="basket" />-->
+		<!--<origin xyz="0.15 0.3 0.3" rpy="0 0 0" />-->
+		<origin xyz="0.6 -0.5 0.02" rpy="0 0 0" />
+	</robot>
 
 
 
