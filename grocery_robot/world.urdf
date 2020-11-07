@@ -8,19 +8,22 @@
 		<origin xyz="0.0 0.3 0.15" rpy="0 0 0" />
 	</robot>
 
+	<!--if change position on tipe of the object, it need to change the ofset,dimensions and shelf in the controller-->
 	<robot name="jar1">
 		<model dir="./resources" path="jar.urdf" name="jar" />
-		<origin xyz="0.0 -0.65 0.2" rpy="0 0 0" />
-		<!--<origin xyz="0.0 -0.65 0.2" rpy="0 0 0" />-->
+		<origin xyz="0.0 -0.4 0.7" rpy="0 0 0" />
 	</robot>
 	<robot name="jar2">
 		<model dir="./resources" path="jar.urdf" name="jar" />
-		<origin xyz="0.0 -0.65 0.6" rpy="0 0 0" />
+		<origin xyz="0.0 -0.65 0.2" rpy="0 0 0" />
 	</robot>
 
+
+	<!--positon and orientation of the shelf need to be includede in controller-->
 	<robot name="shelf1">
 		<model dir="./resources" path="shelf.urdf" name="shelf" />
 		<origin xyz="0.0 -0.3 0.0" rpy="0 0 0" />
+		<!--<origin xyz="0.0 0.8 0.0" rpy="0 0 3.14" />--><!--facing the other direction-->
 	</robot>
 
 	<!--<robot name="basket">
@@ -125,7 +128,7 @@
 	</light>
 
 	<camera name="camera_fixed">
- 		<position xyz="2.0 0.0 1" />
+ 		<position xyz="3.0 1.0 1" />
 		<vertical xyz="0.0 0.0 1.0" />
 		<lookat xyz="0.0 -0.5 0.3" /> 
 <!--		<position xyz="0.1 0.3 5.0" />

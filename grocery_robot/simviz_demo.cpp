@@ -48,8 +48,8 @@ const std::string EE_FORCE_KEY_l = "cs225a::sensor::force3";
 const std::string EE_MOMENT_KEY = "cs225a::sensor::moment";
 
 //MOD FOR SEVERAL OBJECT
-const std::string OBJ_JOINT_ANGLES_KEY  = "cs225a::object::cup::sensors::q";
-const std::string OBJ_JOINT_VELOCITIES_KEY = "cs225a::object::cup::sensors::dq";
+const std::string OBJ_JOINT_ANGLES_KEY  = "cs225a::object::object1::sensors::q";
+const std::string OBJ_JOINT_VELOCITIES_KEY = "cs225a::object::object1::sensors::dq";
 const std::string BASKET_JOINT_ANGLES_KEY  = "cs225a::object::basket::sensors::q";
 const std::string BASKET_JOINT_VELOCITIES_KEY = "cs225a::object::basket::sensors::dq";
 
@@ -113,9 +113,8 @@ int main() {
 	Eigen::Vector3d camera_pos, camera_lookat, camera_vertical;
 	graphics->getCameraPose(camera_name, camera_pos, camera_vertical, camera_lookat);
 	graphics->showLinkFrame(true, robot_name, ee_link_name, 0.18);  // robot link 7 frame
-	graphics->showLinkFrame(true, obj_name, "link6", 0.15);  // cup frame
-	//graphics->showLinkFrame(true, basket_name, "basket_wall1", 0.15);  // cup frame
-
+	graphics->showLinkFrame(true, obj_name, "link6", 0.15);  // jar1 frame
+	//graphics->showLinkFrame(true, basket_name, "basket_wall1", 0.15);  
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
 	robot->_q(3) = -0.8;
