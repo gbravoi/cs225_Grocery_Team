@@ -839,7 +839,6 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			 * Move backward to leave shelf space.
 			 **/
 			//target position set in the previous step
-			cout<<Object->x_w.transpose()<<endl;
 			//force
 			RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des,0.1);
 			RobotController->Gripper_controller(Robot->pick_up_force);//gripper will hold in the designated force
@@ -859,19 +858,19 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			//placing object in the basket. Follow waypoints in base frame
 			arrived=Robot->checkWaypoints(Robot->home_to_basket_waypoints, 1, 1);
 			target_q = Robot->next_waypoint_ee;
-			RobotController->Arm_Joint_controller(target_q);
-			RobotController->Gripper_controller(Robot->pick_up_force);//gripper will hold in the designated force
-			control_torques=RobotController->Return_torques();
 
-			// if(arrived){
-			// 		// Robot->set_robot_state(Robot_States::R_IDLE);
-			// 		// control_torques.setZero();
-			// }else{
-			// 		RobotController->Arm_Joint_controller(target_q);
-			// 		RobotController->Gripper_controller(Robot->pick_up_force);//gripper will hold in the designated force
-			// 		control_torques=RobotController->Return_torques();
-			// }
-			// cout<<control_torques<<endl;
+			if(arrived){
+					Robot->set_robot_state(Robot_States::R_IDLE);
+					RobotController->Arm_Joint_controller(target_q);
+					RobotController->Gripper_controller(0);//release
+					control_torques=RobotController->Return_torques();
+					cout<<"release"<<endl;
+			}else{
+					RobotController->Arm_Joint_controller(target_q);
+					RobotController->Gripper_controller(Robot->pick_up_force);//gripper will hold in the designated force
+					control_torques=RobotController->Return_torques();
+			}
+			//cout<<control_torques<<endl;
 			break;
 		// default:
 		// 	control_torques.setZero();
@@ -1050,7 +1049,7 @@ fTimerDidSleep = timer.waitForNextLoop();
 			control_torques=Navigate_to_point(&RobotController,Robot.next_waypoint_base,0.5);
 			if(arrived){
 				//go next state, pick from shelf
-				Robot.set_robot_state(Robot_States::R_IDLE);
+				Robot.set_robot_state(Robot_States::MOVING_ARM);
 				set_simulation_state(Simulation_states::PICK_SHELF_OBJECTS);
 				control_torques.setZero();
 			}else{
@@ -1065,10 +1064,16 @@ fTimerDidSleep = timer.waitForNextLoop();
 			//if robot is idle, go to the next object in the list
 			//if list ended, move to go to conveyor
 			 case Robot_States::R_IDLE:
-				//TODO: move to the next object
-				Robot.set_robot_state(Robot_States::MOVING_ARM);
-				control_torques=pick_shelf_objects(&RobotController,current_object);
-
+				//check if there are more element in the list, if not, move go to conveyor
+				if(list_objects.size()==0){
+					set_simulation_state(Simulation_states::GO_TO_CONVEYOR);
+					control_torques.setZero();
+				}else{//else update current object
+					current_object=list_objects.front();
+					list_objects.pop_front();//delete from the list
+					Robot.set_robot_state(Robot_States::MOVING_ARM);
+					control_torques=pick_shelf_objects(&RobotController,current_object);
+				}
 				break;
 			 default:
 			    //default, continue in the picking shelf function
