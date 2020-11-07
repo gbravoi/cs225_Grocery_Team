@@ -374,6 +374,9 @@ void Grocery_Robot::generate_to_basket_waypoints(){
 	// home_to_basket_waypoints.col(1) = basket_top_q;
 	// // home_to_basket_waypoints.col(1) = (home_q+basket_top_q)/2;
 	// home_to_basket_waypoints.col(2) = basket_top_q;
+
+
+	//basket frame
 	home_to_basket_waypoints.col(0)<<0.25,0,0.8;//POSITION OF THE TOP OF THE BASKET
 	home_to_basket_waypoints.col(1)<<0.25,0,0.4;//POSITION OF THE TOP OF THE BASKET
 };
@@ -629,13 +632,11 @@ void Controller::Arm_Joint_controller(VectorXd q_des){
 	VectorXd arm_controller;
 	VectorXd base_controller;
 	MatrixXd M_base=Robot->M.block(0,0,3,3);
-	MatrixXd M_arm=Robot->M.block(3,3,7,7);
 	//update dynamics in world coordinates
 	VectorXd dq_arm=Robot->dq.segment(3,7);
 	//compute arm controller (7 joints)
 	VectorXd q_arm=Robot->q.segment(3,7);
-	//arm_controller = -400.0*(q_arm-q_des)-55.0*dq_arm;
-	arm_controller = M_arm*(- (400 *dq_arm) -55*(q_arm-q_des));
+	arm_controller = -400.0*(q_arm-q_des)-55.0*dq_arm;
 	// //compute base controller to keep corrent position
 	Vector3d base_position;
 	base_position=Robot->base_position;
@@ -644,6 +645,8 @@ void Controller::Arm_Joint_controller(VectorXd q_des){
 	base_controller=M_base*(- (kvj *dq_base) -kpj*(q_base-base_position));
 	control_torques<<base_controller(0),base_controller(1),base_controller(2),arm_controller(0),arm_controller(1),arm_controller(2),arm_controller(3),arm_controller(4),arm_controller(5),arm_controller(6),0.0,0.0;
 	Whole_body_controller=control_torques;
+
+
 };
 
 void Controller::Gripper_controller(double gripper_force){
@@ -771,6 +774,7 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 	Matrix3d R_des;
 	Matrix3d R_w;
 	VectorXd force_r;
+	VectorXd target_q;
 	VectorXd force_l;
 	VectorXd force_ee;
 	//define horizontal horientation
@@ -932,6 +936,20 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 				RobotController->Gripper_controller(Robot->pick_up_force);
 				control_torques=RobotController->Return_torques();
 			}
+
+
+			// arrived=Robot->checkWaypoints(Robot->home_to_basket_waypoints, 3, 1);
+			// target_q = Robot->next_waypoint_ee;
+			// if(arrived){
+			// 		// Robot->set_robot_state(Robot_States::R_IDLE);
+			// 		// control_torques.setZero();
+			// }else{
+			// 		RobotController->Arm_Joint_controller(target_q);
+			// 		RobotController->Gripper_controller(Robot->pick_up_force);//gripper will hold in the designated force
+			// 		control_torques=RobotController->Return_torques();
+			// }
+
+
 
 			break;
 		default:
