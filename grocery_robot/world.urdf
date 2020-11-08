@@ -10,17 +10,101 @@
 
 	<robot name="jar1">
 		<model dir="./resources" path="jar.urdf" name="jar" />
-		<origin xyz="0.0 -0.65 0.2" rpy="0 0 0" />
+		<origin xyz="0.0 -0.65 0.1" rpy="0 0 0" />
 		<!--<origin xyz="0.0 -0.65 0.2" rpy="0 0 0" />-->
 	</robot>
+	
 	<robot name="jar2">
 		<model dir="./resources" path="jar.urdf" name="jar" />
-		<origin xyz="0.0 -0.65 0.6" rpy="0 0 0" />
+		<origin xyz="0.0 -0.65 0.49" rpy="0 0 0" />
 	</robot>
+	
+	<!--first group-->
 
 	<robot name="shelf1">
 		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="0.0 -0.3 0.0" rpy="0 0 0" />
+		<origin xyz="1.3 -0.8 0.0" rpy="0 0 0" />
+	</robot>
+	
+	<robot name="shelf2">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="2.35 -0.8 0.0" rpy="0 0 0" />
+	</robot>
+	
+	<robot name="shelf3">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="1.3 -1.75 0.0" rpy="0 0 3.14159265358" />
+	</robot>
+	
+	<robot name="shelf4">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="2.35 -1.75 0.0" rpy="0 0 3.14159265358" />
+	</robot>
+	
+	<!--second group-->
+	
+	<robot name="shelf5">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="-1.3 -0.8 0.0" rpy="0 0 0" />
+	</robot>
+	
+	<robot name="shelf6">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="-2.35 -0.8 0.0" rpy="0 0 0" />
+	</robot>
+	
+	<robot name="shelf7">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="-1.3 -1.75 0.0" rpy="0 0 3.14159265358" />
+	</robot>
+	
+	<robot name="shelf8">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="-2.35 -1.75 0.0" rpy="0 0 3.14159265358" />
+	</robot>
+	
+	<!--third group-->
+	
+	<robot name="shelf9">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="1.3 0.8 0.0" rpy="0 0 3.14159265358" />
+	</robot>
+	
+	<robot name="shelf10">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="2.35 0.8 0.0" rpy="0 0 3.14159265358" />
+	</robot>
+	
+	<robot name="shelf11">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="1.3 1.75 0.0" rpy="0 0 0" />
+	</robot>
+	
+	<robot name="shelf12">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="2.35 1.75 0.0" rpy="0 0 0" />
+	</robot>
+	
+	<!--fourth group-->
+	
+	<robot name="shelf13">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="-1.3 0.8 0.0" rpy="0 0 3.14159265358" />
+	</robot>
+	
+	<robot name="shelf14">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="-2.35 0.8 0.0" rpy="0 0 3.14159265358" />
+	</robot>
+	
+	<robot name="shelf15">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="-1.3 1.75 0.0" rpy="0 0 0" />
+	</robot>
+	
+	<robot name="shelf16">
+		<model dir="./resources" path="shelf.urdf" name="shelf" />
+		<origin xyz="-2.35 1.75 0.0" rpy="0 0 0" />
 	</robot>
 
 	<!--<robot name="basket">
@@ -125,7 +209,7 @@
 	</light>
 
 	<camera name="camera_fixed">
- 		<position xyz="2.0 0.0 1" />
+ 		<position xyz="0.0 0.0 3.0" />
 		<vertical xyz="0.0 0.0 1.0" />
 		<lookat xyz="0.0 -0.5 0.3" /> 
 <!--		<position xyz="0.1 0.3 5.0" />
