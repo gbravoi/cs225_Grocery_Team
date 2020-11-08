@@ -36,7 +36,7 @@
 	        </material>
 	    </visual>-->
       <collision>
-	        <origin xyz="0.0 -0.2315 0.39" rpy="0 0 0" />
+	        <origin xyz="0.0 -0.2315 0.38" rpy="0 0 0" />
 	        <geometry>
 	           <box size="1.0 0.463 0.02" />
 	        </geometry>
@@ -53,7 +53,7 @@
 	        </material>
 	    </visual>-->
       <collision>
-	        <origin xyz="0.0 -0.2315 0.68" rpy="0 0 0" />
+	        <origin xyz="0.0 -0.2315 0.66" rpy="0 0 0" />
 	        <geometry>
 	           <box size="1.0 0.463 0.02" />
 	        </geometry>
