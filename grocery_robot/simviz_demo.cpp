@@ -29,7 +29,11 @@ const string ee_link_name = "link7";
 //MOD FOR SEVERAL OBJECT
 const string obj_name = "jar1";
 const string obj_file = "./resources/jar.urdf";
-const string basket_name = "jar2";
+const string obj2_name = "jar2";
+const string obj2_file = "./resources/jar.urdf";
+const string obj3_name = "jar3";
+const string obj3_file = "./resources/jar.urdf";
+const string basket_name = "basket";
 const string basket_file = "./resources/jar.urdf";
 
 RedisClient redis_client;
@@ -48,8 +52,12 @@ const std::string EE_FORCE_KEY_l = "cs225a::sensor::force3";
 const std::string EE_MOMENT_KEY = "cs225a::sensor::moment";
 
 //MOD FOR SEVERAL OBJECT
-const std::string OBJ_JOINT_ANGLES_KEY  = "cs225a::object::cup::sensors::q";
-const std::string OBJ_JOINT_VELOCITIES_KEY = "cs225a::object::cup::sensors::dq";
+const std::string OBJ_JOINT_ANGLES_KEY  = "cs225a::object::object1::sensors::q";
+const std::string OBJ_JOINT_VELOCITIES_KEY = "cs225a::object::object1::sensors::dq";
+const std::string OBJ2_JOINT_ANGLES_KEY  = "cs225a::object::object2::sensors::q";
+const std::string OBJ2_JOINT_VELOCITIES_KEY = "cs225a::object::object2::sensors::dq";
+const std::string OBJ3_JOINT_ANGLES_KEY  = "cs225a::object::object3::sensors::q";
+const std::string OBJ3_JOINT_VELOCITIES_KEY = "cs225a::object::object3::sensors::dq";
 const std::string BASKET_JOINT_ANGLES_KEY  = "cs225a::object::basket::sensors::q";
 const std::string BASKET_JOINT_VELOCITIES_KEY = "cs225a::object::basket::sensors::dq";
 
@@ -66,7 +74,7 @@ ForceSensorDisplay* force_display;
 
 //MOD FOR SEVERAL OBJECT
 // simulation thread
-void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object,Sai2Model::Sai2Model* basket, Simulation::Sai2Simulation* sim, UIForceWidget *ui_force_widget);
+void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object,Sai2Model::Sai2Model* object2,Sai2Model::Sai2Model* object3,Sai2Model::Sai2Model* basket, Simulation::Sai2Simulation* sim, UIForceWidget *ui_force_widget);
 
 // callback to print glfw errors
 void glfwError(int error, const char* description);
@@ -113,9 +121,8 @@ int main() {
 	Eigen::Vector3d camera_pos, camera_lookat, camera_vertical;
 	graphics->getCameraPose(camera_name, camera_pos, camera_vertical, camera_lookat);
 	graphics->showLinkFrame(true, robot_name, ee_link_name, 0.18);  // robot link 7 frame
-	graphics->showLinkFrame(true, obj_name, "link6", 0.15);  // cup frame
-	//graphics->showLinkFrame(true, basket_name, "basket_wall1", 0.15);  // cup frame
-
+	graphics->showLinkFrame(true, obj_name, "link6", 0.15);  // jar1 frame
+	//graphics->showLinkFrame(true, basket_name, "basket_wall1", 0.15);  
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
 	robot->_q(3) = -0.8;
@@ -127,7 +134,12 @@ int main() {
 	// load robot objects
 	auto object = new Sai2Model::Sai2Model(obj_file, false);
 	object->updateModel();
+	auto object2 = new Sai2Model::Sai2Model(obj2_file, false);
+	object2->updateModel();
+	auto object3 = new Sai2Model::Sai2Model(obj3_file, false);
+	object3->updateModel();
 	auto basket = new Sai2Model::Sai2Model(basket_file, false);
+	basket->_q<<0,0,0,0,0,0;
 	basket->updateModel();
 
 	// load simulation world
@@ -136,6 +148,8 @@ int main() {
 	
 	//MOD FOR SEVERAL OBJECT
 	sim->setJointPositions(obj_name, object->_q);
+	sim->setJointPositions(obj2_name, object2->_q);
+	sim->setJointPositions(obj3_name, object3->_q);
 	sim->setJointPositions(basket_name, basket->_q);
 
     // set co-efficient of restition to zero for force control
@@ -199,12 +213,16 @@ int main() {
 	//MOD FOR SEVERAL OBJECT
 	redis_client.setEigenMatrixJSON(OBJ_JOINT_ANGLES_KEY, object->_q); 
 	redis_client.setEigenMatrixJSON(OBJ_JOINT_VELOCITIES_KEY, object->_dq); 
+	redis_client.setEigenMatrixJSON(OBJ2_JOINT_ANGLES_KEY, object2->_q); 
+	redis_client.setEigenMatrixJSON(OBJ2_JOINT_VELOCITIES_KEY, object2->_dq); 
+	redis_client.setEigenMatrixJSON(OBJ3_JOINT_ANGLES_KEY, object3->_q); 
+	redis_client.setEigenMatrixJSON(OBJ3_JOINT_VELOCITIES_KEY, object3->_dq); 
 	redis_client.setEigenMatrixJSON(BASKET_JOINT_ANGLES_KEY, basket->_q); 
 	redis_client.setEigenMatrixJSON(BASKET_JOINT_VELOCITIES_KEY, basket->_dq); 
 
 	//MOD FOR SEVERAL OBJECT
 	// start simulation thread
-	thread sim_thread(simulation, robot, object,basket, sim, ui_force_widget);
+	thread sim_thread(simulation, robot, object,object2,object3,basket, sim, ui_force_widget);
 
 	// initialize glew
 	glewInitialize();
@@ -221,6 +239,8 @@ int main() {
 
 		//MOD FOR SEVERAL OBJECT
 		graphics->updateGraphics(obj_name, object);
+		graphics->updateGraphics(obj2_name, object2);
+		graphics->updateGraphics(obj3_name, object3);
 		graphics->updateGraphics(basket_name, basket);
 
 		// swap buffers
@@ -337,7 +357,7 @@ int main() {
 //------------------------------------------------------------------------------
 
 //MOD FOR SEVERAL OBJECT
-void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Sai2Model::Sai2Model* basket, Simulation::Sai2Simulation* sim, UIForceWidget *ui_force_widget)
+void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Sai2Model::Sai2Model* object2,Sai2Model::Sai2Model* object3, Sai2Model::Sai2Model* basket, Simulation::Sai2Simulation* sim, UIForceWidget *ui_force_widget)
 {
 	// prepare simulation
 	int dof = robot->dof();
@@ -383,7 +403,7 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Sai2M
 
 	//MOD FOR SEVERAL OBJECT
 	// setup redis client data container for pipeset (batch write)
-	std::vector<std::pair<std::string, std::string>> redis_data(14);  // set with the number of keys to write 
+	std::vector<std::pair<std::string, std::string>> redis_data(18);  // set with the number of keys to write 
 
 	// setup white noise generator
     const double mean = 0.0;
@@ -424,6 +444,12 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Sai2M
 		sim->getJointPositions(obj_name, object->_q);
 		sim->getJointVelocities(obj_name, object->_dq);
 		object->updateModel();
+		sim->getJointPositions(obj2_name, object2->_q);
+		sim->getJointVelocities(obj2_name, object2->_dq);
+		object2->updateModel();
+		sim->getJointPositions(obj3_name, object3->_q);
+		sim->getJointVelocities(obj3_name, object3->_dq);
+		object3->updateModel();
 		sim->getJointPositions(basket_name, basket->_q);
 		sim->getJointVelocities(basket_name, basket->_dq);
 		basket->updateModel();
@@ -467,20 +493,25 @@ void simulation(Sai2Model::Sai2Model* robot, Sai2Model::Sai2Model* object, Sai2M
 		// shown explicitly here, but you can define a helper function to publish data 
 		redis_data.at(2) = std::pair<string, string>(JOINT_ANGLES_KEY, redis_client.encodeEigenMatrixJSON(robot->_q));
 		redis_data.at(3) = std::pair<string, string>(JOINT_VELOCITIES_KEY, redis_client.encodeEigenMatrixJSON(robot->_dq));
-		redis_data.at(6) = std::pair<string, string>(CAMERA_POS_KEY, redis_client.encodeEigenMatrixJSON(camera_pos));
-		redis_data.at(7) = std::pair<string, string>(CAMERA_ORI_KEY, redis_client.encodeEigenMatrixJSON(camera_ori));
-		redis_data.at(8) = std::pair<string, string>(EE_FORCE_KEY_EEF, redis_client.encodeEigenMatrixJSON(sensed_force_eef));
-		redis_data.at(9) = std::pair<string, string>(EE_FORCE_KEY_r, redis_client.encodeEigenMatrixJSON(sensed_force_r));
-		redis_data.at(10) = std::pair<string, string>(EE_FORCE_KEY_l, redis_client.encodeEigenMatrixJSON(sensed_force_l));
-		redis_data.at(11) = std::pair<string, string>(EE_MOMENT_KEY, redis_client.encodeEigenMatrixJSON(sensed_moment));
+		redis_data.at(4) = std::pair<string, string>(CAMERA_POS_KEY, redis_client.encodeEigenMatrixJSON(camera_pos));
+		redis_data.at(5) = std::pair<string, string>(CAMERA_ORI_KEY, redis_client.encodeEigenMatrixJSON(camera_ori));
+		redis_data.at(6) = std::pair<string, string>(EE_FORCE_KEY_EEF, redis_client.encodeEigenMatrixJSON(sensed_force_eef));
+		redis_data.at(7) = std::pair<string, string>(EE_FORCE_KEY_r, redis_client.encodeEigenMatrixJSON(sensed_force_r));
+		redis_data.at(8) = std::pair<string, string>(EE_FORCE_KEY_l, redis_client.encodeEigenMatrixJSON(sensed_force_l));
+		redis_data.at(9) = std::pair<string, string>(EE_MOMENT_KEY, redis_client.encodeEigenMatrixJSON(sensed_moment));
 
 		redis_client.pipeset(redis_data);
 
 		//MOD FOR SEVERAL OBJECT
-		redis_data.at(4) = std::pair<string, string>(OBJ_JOINT_ANGLES_KEY, redis_client.encodeEigenMatrixJSON(object->_q));
-		redis_data.at(5) = std::pair<string, string>(OBJ_JOINT_VELOCITIES_KEY, redis_client.encodeEigenMatrixJSON(object->_dq));
-		redis_data.at(12) = std::pair<string, string>(BASKET_JOINT_ANGLES_KEY, redis_client.encodeEigenMatrixJSON(basket->_q));
-		redis_data.at(13) = std::pair<string, string>(BASKET_JOINT_VELOCITIES_KEY, redis_client.encodeEigenMatrixJSON(basket->_dq));
+		redis_data.at(10) = std::pair<string, string>(OBJ_JOINT_ANGLES_KEY, redis_client.encodeEigenMatrixJSON(object->_q));
+		redis_data.at(11) = std::pair<string, string>(OBJ_JOINT_VELOCITIES_KEY, redis_client.encodeEigenMatrixJSON(object->_dq));
+		redis_data.at(12) = std::pair<string, string>(OBJ2_JOINT_ANGLES_KEY, redis_client.encodeEigenMatrixJSON(object2->_q));
+		redis_data.at(13) = std::pair<string, string>(OBJ2_JOINT_VELOCITIES_KEY, redis_client.encodeEigenMatrixJSON(object2->_dq));
+		redis_data.at(14) = std::pair<string, string>(OBJ3_JOINT_ANGLES_KEY, redis_client.encodeEigenMatrixJSON(object3->_q));
+		redis_data.at(15) = std::pair<string, string>(OBJ3_JOINT_VELOCITIES_KEY, redis_client.encodeEigenMatrixJSON(object3->_dq));
+		redis_data.at(16) = std::pair<string, string>(BASKET_JOINT_ANGLES_KEY, redis_client.encodeEigenMatrixJSON(basket->_q));
+		redis_data.at(17) = std::pair<string, string>(BASKET_JOINT_VELOCITIES_KEY, redis_client.encodeEigenMatrixJSON(basket->_dq));
+		
 
 
 
