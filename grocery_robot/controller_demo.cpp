@@ -377,7 +377,7 @@ void Grocery_Robot::generate_to_basket_waypoints(){
 
 
 	//basket frame
-	home_to_basket_waypoints.col(0)<<0.25,0,0.8;//POSITION OF THE TOP OF THE BASKET
+	home_to_basket_waypoints.col(0)<<0.1,0,0.8;//POSITION OF THE TOP OF THE BASKET
 	home_to_basket_waypoints.col(1)<<0.25,0,0.4;//POSITION OF THE TOP OF THE BASKET
 };
 
