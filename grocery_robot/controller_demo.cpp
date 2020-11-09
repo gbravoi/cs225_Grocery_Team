@@ -3,8 +3,8 @@
 #include "timer/LoopTimer.h"
 #include <iostream>
 #include <string>
-#include <list> // for list operations 
-
+#include <list> // for list operations
+#include <math.h>
 using namespace std;
 using namespace Eigen;
 
@@ -154,12 +154,12 @@ class Shelf{
 		Vector3d origin_xyz;//position
 		Vector3d origin_rpy;//orientation
 		double depth; //depth of the shelf
-		
+
 		//functions
 		Matrix3d get_eef_orientation();
 		Vector3d position_front_shelf();
 		Matrix3d get_Rot_matrix();
-		
+
 };
 Matrix3d Shelf::get_Rot_matrix(){
 	double angle=origin_rpy(2);//rotation in z
@@ -209,7 +209,7 @@ class Objects_class{
 		//functions definition
 		void Update_states();
 		Vector3d get_position_front_object_in_shelf();
-		
+
 };
 void Objects_class::Update_states(){
 	// update object model
@@ -231,7 +231,7 @@ void Objects_class::Update_states(){
 	 double proj=diff.dot(y_hat_shelf);//projection
 	 return x_w+y_hat_shelf*proj;
  }
- 
+
 
 
 
@@ -256,6 +256,9 @@ class Grocery_Robot{
 		MatrixXd N;
 		VectorXd g;
 		MatrixXd M; //mass matrix
+
+		//aisle properties
+		MatrixXd aisle_pts;
 
 		//matrices needed for arm control
 		MatrixXd Jv_arm;
@@ -333,6 +336,7 @@ void Grocery_Robot::Update_states(){
 	robot->rotation(R, link_name);
 	robot->rotationInWorld(R_w, link_name);
 	Transformation_w2b=robot->_T_world_robot;
+	base_position<<q(0),q(1),q(2);
  };
 
 void Grocery_Robot::Update_dynamics(bool world_coordinates=false){
@@ -414,7 +418,8 @@ bool Grocery_Robot::checkWaypoints(MatrixXd& waypoints, int num_waypoints, bool 
 		}else{
 			next_waypoint_base = waypoints.col(waypoint_iterator);
 		}
-		cout<<"Next Waypoint: "<<waypoints.col(waypoint_iterator).transpose()<<endl;
+		cout<<"New Waypoint Set"<<endl;
+		cout<<"First Waypoint: "<<waypoints.col(waypoint_iterator).transpose()<<endl;
 	}
 	Vector3d dist;
 	if(ee){
@@ -424,7 +429,7 @@ bool Grocery_Robot::checkWaypoints(MatrixXd& waypoints, int num_waypoints, bool 
 		dist = base_position-waypoints.col(waypoint_iterator);
  	}
 	double max_time_btw_waypoints = ee?2.0:20.0;
-	double distance_thres = ee?0.01:0.01;
+	double distance_thres = ee?0.01:0.1;
 	if(dist.norm() < distance_thres || cur_time - last_waypoint_arrival_time > max_time_btw_waypoints){
 		waypoint_iterator++;
 		last_waypoint_arrival_time = cur_time;
@@ -540,7 +545,7 @@ void Controller::Arm_World_Position_Orientation_controller(Vector3d goal_pos_in_
 			x_vel_des = - kp / kv * (delta_phi);
 			nu = sat(Vmax / x_vel_des.norm());
 			pd_w = (-kv*(Robot->w-nu*x_vel_des));//kp * (- delta_phi) - kv * Robot->w;
-		}else{//else typical control 
+		}else{//else typical control
 			pd_w = kp * (- delta_phi) - kv * Robot->w;
 		}
 
@@ -609,11 +614,11 @@ void Controller::Arm_Local_Position_Orientation_controller(Vector3d goal_pos_in_
 			x_vel_des = - kp / kv * (delta_phi);
 			nu = sat(Vmax / x_vel_des.norm());
 			pd_w = (-kv*(Robot->w-nu*x_vel_des));//kp * (- delta_phi) - kv * Robot->w;
-		}else{//else typical control 
+		}else{//else typical control
 			pd_w = kp * (- delta_phi) - kv * Robot->w;
 		}
 
-		
+
 
 		VectorXd pd(6);
 		pd << pd_x[0], pd_x[1], pd_x[2], pd_w[0], pd_w[1], pd_w[2];
@@ -746,7 +751,68 @@ VectorXd Controller::Return_torques(){
 bool navigation_reached_goal(Controller *RobotController , Vector3d point_world){
 	Grocery_Robot* Robot=RobotController->Robot;
 	return (point_world.head(2)-Robot->q.head(2)).norm()>0.1;
+}
 
+bool can_see(Vector3d p1, Vector3d p2){
+	double thres = 0.3;
+	if(abs(p1(1)-p2(1)) < thres) return true;
+	if(abs(p1(0)-p2(0)) < thres){
+		for(int i = -1; i < 2; i++){
+			if(abs(i*3.65-p1(0)) < thres) return true;
+		}
+	}
+	return false;
+}
+
+double L1(Vector3d p1, Vector3d p2){
+	return abs(p1(0)-p2(0))+abs(p1(1)-p2(1));
+}
+
+void generate_navigation_points_for_object(Grocery_Robot* Robot,Vector3d start, Vector3d goal){
+	Robot->navigation_waypoints.col(0) = start;
+	Robot->navigation_waypoints.col(1) = goal;
+	Robot->navigation_waypoints.col(2) = goal;
+	Robot->navigation_waypoints.col(3) = goal;
+	Robot->navigation_waypoints.row(2) = VectorXd::Ones(4)*goal(2);
+	if(L1(start,goal)<0.1){
+		return;
+	}
+	int pts_need_orientation_cal = 1;
+	if(!can_see(start,goal)){
+		VectorXd start_sees = VectorXd::Zero(9);
+		VectorXd goal_sees = VectorXd::Zero(9);
+		for(int i = 0; i < 9; i++){
+			if(can_see(start,Robot->aisle_pts.col(i)))start_sees(i) = 1;
+			if(can_see(goal,Robot->aisle_pts.col(i)))goal_sees(i) = 1;
+			if(start_sees(i)&&goal_sees(i)){
+				pts_need_orientation_cal = 2;
+				Robot->navigation_waypoints.col(1) = Robot->aisle_pts.col(i);
+			}
+		}
+		if(pts_need_orientation_cal!=2){
+			pts_need_orientation_cal = 3;
+			double min_dist = 100000;
+			for(int i = 0; i < 9; i++){
+				for(int j=0; j < 9; j++){
+					if(start_sees(i)&&goal_sees(j)){
+						Vector3d p1 = Robot->aisle_pts.col(i);
+						Vector3d p2 = Robot->aisle_pts.col(j);
+						double dist = L1(start,p1)+L1(p1,p2)+L1(p2,goal);
+						if(dist < min_dist){
+							min_dist = dist;
+							Robot->navigation_waypoints.col(1) = p1;
+							Robot->navigation_waypoints.col(2) = p2;
+						}
+					}
+				}
+			}
+		}
+	}
+	for(int i =0; i < pts_need_orientation_cal; i++){
+		double dx = Robot->navigation_waypoints(0,i+1)-Robot->navigation_waypoints(0,i);
+		double dy = Robot->navigation_waypoints(1,i+1)-Robot->navigation_waypoints(1,i);
+		Robot->navigation_waypoints(2,i)=atan2(dy,dx);
+	}
 }
 
 VectorXd Navigate_to_point(Controller *RobotController , Vector3d point_world, double V_max){
@@ -760,7 +826,7 @@ VectorXd Navigate_to_point(Controller *RobotController , Vector3d point_world, d
 	}
 	RobotController->Base_controller(point_world,V_max);
 	//upodate last position of the base
-	Robot->base_position<<Robot->q(0),Robot->q(1),Robot->q(2);
+	// Robot->base_position<<Robot->q(0),Robot->q(1),Robot->q(2);
 	//send controller
 	return RobotController->Return_torques();
 }
@@ -795,8 +861,6 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 	x_w=Robot->x_w;
 	switch (Robot->Current_state)
 	{
-		
-		// case NAVIGATING: //Function navigating is GO_TO_SHELF
 
 		case MOVING_ARM:
 			/**
@@ -870,13 +934,13 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 
 			//when force detected, hold for a momnet (counter time) then rise, and go next state
 			if(force_r.norm()>0.01 || force_l.norm()>0.01){
-				if (pick_shelf_objects_counter>=hold_time){					
+				if (pick_shelf_objects_counter>=hold_time){
 					//forces to hold moving a little up
 					RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des,0.1);
 					RobotController->Gripper_controller(Robot->pick_up_force);//gripper will hold in the designated force
 					control_torques=RobotController->Return_torques();
-					
-					
+
+
 					// RobotController->Arm_Local_Position_Orientation_controller(target_pos,Robot->get_base_rotation().transpose()*R_des,0.1);//base frame
 					// RobotController->Gripper_controller(Robot->pick_up_force);//gripper will hold in the designated force
 					// control_torques=RobotController->Return_torques();
@@ -901,7 +965,7 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 						//move a little up
 						//target_pos<<Robot->x(0),Robot->x(1),Robot->x(2);//base frame
 						target_pos(2)+=0.05;//this is the distance that will go up, latter replace depending on the shelf.
-						Robot->base_position<<Robot->q(0),Robot->q(1),Robot->q(2);
+						// Robot->base_position<<Robot->q(0),Robot->q(1),Robot->q(2);
 						cout<<"target poss counter "<<target_pos.transpose()<<endl;
 					}
 				}
@@ -1035,22 +1099,27 @@ int main() {
 	//Robot.HomePosition<<0.0,0.0,0.0, 0.798855 ,-0.328792, -0.001426 ,-0.006871, -0.000757, -0.053838 ,-0.000491 ,-0.039092,- -0.119215;
 	Robot.HomePosition<<0.0,0.0,0, -1.57079632679, -0.785, 0, -2.356, 0, 1.571, 0.785 ,0.04, -0.04;
 	Robot.Update_states();
-	Robot.base_position<<Robot.q(0),Robot.q(1),Robot.q(2);
+	// Robot.base_position<<Robot.q(0),Robot.q(1),Robot.q(2);
 
+  //aisle attributes
+	const VectorXd aisle_xs = (VectorXd(9)<<-3.65,0.0,3.65,-3.65,0.0,3.65,-3.65,0.0,3.65).finished();
+	const VectorXd aisle_ys = (VectorXd(9)<<-2.55,-2.55,-2.55,0.0,0.0,0.0,2.55,2.55,2.55).finished();
+	Robot.aisle_pts = MatrixXd::Zero(3,9);
+	Robot.aisle_pts.row(0) = aisle_xs;
+	Robot.aisle_pts.row(1) = aisle_ys;
 
 	//create robot object
 	Robot.cur_time = timer.elapsedTime();
 	//initialize waypoints
-	Robot.navigation_waypoints = MatrixXd(3,3);
-	Robot.navigation_waypoints<<0.0,0.0,0.0,
-	0.0,0.0,0.0,
-	0.0,0.0,0.0;
-	Robot.navigation_waypoints.transposeInPlace();
+	Robot.navigation_waypoints = MatrixXd(3,4);
+	// Robot.navigation_waypoints<<0.0,0.0,0.0,
+	// 0.0,0.0,0.0,
+	// 0.0,0.0,0.0;
+	// Robot.navigation_waypoints.transposeInPlace();
 
 	//Robot.home_to_basket_waypoints = MatrixXd(7,3);
 	Robot.home_to_basket_waypoints = MatrixXd(3,3);//IN ROBOT FRAME
 	Robot.waypoint_iterator = -1;
-	// Robot.Current_state=Robot_States::NAVIGATING;
 	Robot.set_robot_state(Robot_States::R_IDLE);
 	//start robot controller
 	Controller RobotController;
@@ -1087,7 +1156,7 @@ int main() {
 	Object1.depth=0.0888;
 	Object1.obj_offset<<2.35 ,-0.9 ,0.7+Object1.height/2;
 	Object1.shelf=Shelf2;
-	
+
 	//Start OBJECT2 JAR2
 	Objects_class Object2;
 	Object2.name="jar2";
@@ -1123,11 +1192,21 @@ int main() {
 
 
 
-	
+
 
 	runloop = true;
+	// cout<<Robot.aisle_pts<<endl;
+	// VectorXd s1 = (VectorXd(3)<<1.0,0.0,0.0).finished();
+	// VectorXd g1 = (VectorXd(3)<<1.0,2.55,0.0).finished();
+	// generate_navigation_points_for_object(&Robot,s1,g1);
+	Vector3d Position;
+
+	Position=current_object->shelf.position_front_shelf();
+	generate_navigation_points_for_object(&Robot,Robot.base_position,Position);//we will need a function that gives all the trayectory... last point is in front of shelf
 	while (runloop)
 	{
+		// cout<<Robot.navigation_waypoints<<endl;
+		// cout<<Robot.navigation_waypoints<<endl;
 
 fTimerDidSleep = timer.waitForNextLoop();
 
@@ -1157,8 +1236,8 @@ fTimerDidSleep = timer.waitForNextLoop();
 		Object3.Update_states();
 
 
-		
-		
+
+
 		//neede variables for state machine
 		Vector3d Position;
 		double Nav_Vmax;
@@ -1191,16 +1270,14 @@ fTimerDidSleep = timer.waitForNextLoop();
 			//last point is shelf position (x,y,theta)
 
 			//position fron of shelf x,y,z
-			Position=current_object->shelf.position_front_shelf();
-
-			Robot.navigation_waypoints = MatrixXd(3,2);//we will need a function that gives all the trayectory... last point is in front of shelf
+			// generate_navigation_points_for_object(&Robot,Robot.base_position,Position);//we will need a function that gives all the trayectory... last point is in front of shelf
 			//add needed rotation
-			Robot.navigation_waypoints.col(0)<<0,0,0;
-			Robot.navigation_waypoints.col(1)<<Position(0),Position(1),0;
-			
-			cout<<"goal"<<Robot.next_waypoint_base,transpose()<<endl;
-			cout<<"current"<<Robot.q(0)<<" "<<Robot.q(1)<<" "<<Robot.q(2)<<endl;
-			arrived=Robot.checkWaypoints(Robot.navigation_waypoints, 2, 0);
+			// Robot.navigation_waypoints.col(0)<<0,0,0;
+			// Robot.navigation_waypoints.col(1)<<Position(0),Position(1),0;
+
+			// cout<<"goal"<<Robot.next_waypoint_base,transpose()<<endl;
+			// cout<<"current"<<Robot.q(0)<<" "<<Robot.q(1)<<" "<<Robot.q(2)<<endl;
+			arrived=Robot.checkWaypoints(Robot.navigation_waypoints, 4, 0);
 			control_torques=Navigate_to_point(&RobotController,Robot.next_waypoint_base,0.7);
 			if(arrived){
 				//go next state, pick from shelf
@@ -1210,15 +1287,16 @@ fTimerDidSleep = timer.waitForNextLoop();
 				current_object=list_objects.front();
 				list_objects.pop_front();//delete from the list
 				set_simulation_state(Simulation_states::GO_TO_SHELF);//go to the next shelf
+				Position=current_object->shelf.position_front_shelf();
+				generate_navigation_points_for_object(&Robot,Robot.base_position,Position);
 				//end test lines
-
 				control_torques.setZero();
 			}
 
 
-			
-			
-			
+
+
+
 
 			break;
 		case Simulation_states::PICK_SHELF_OBJECTS:
@@ -1235,6 +1313,8 @@ fTimerDidSleep = timer.waitForNextLoop();
 					current_object=list_objects.front();
 					list_objects.pop_front();//delete from the list
 					set_simulation_state(Simulation_states::GO_TO_SHELF);//go to the next shelf
+					Position=current_object->shelf.position_front_shelf();
+					generate_navigation_points_for_object(&Robot,Robot.base_position,Position);
 					Robot.set_robot_state(Robot_States::R_IDLE);
 					control_torques=pick_shelf_objects(&RobotController,current_object);
 				}
