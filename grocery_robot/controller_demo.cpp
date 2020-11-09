@@ -109,7 +109,7 @@ std::ostream& operator<<(std::ostream& out, const Simulation_states value){
 
 
 //other values
-const double SHELF_SAFE_DIST=0.2;
+const double SHELF_SAFE_DIST=0.3;
 const Matrix3d R_hor_ee ((Matrix3d() << 1.57079632679,1.57079632679, 0.0,
 									0.0, 0.0, -1.0,
 									-1.57079632679, 1.57079632679, 0.0).finished());//world enf effector horizontal position
@@ -167,7 +167,7 @@ Matrix3d Shelf::get_eef_orientation(){
 
 	 //rotation in world
 	Matrix3d Rot=get_Rot_matrix();
-	 return origin_xyz+Rot*y_distance;
+	return origin_xyz+Rot*y_distance;
  };
 
 
@@ -286,7 +286,7 @@ class Grocery_Robot{
 		int dof;
 		const string link_name = "link7";
 		const Vector3d pos_in_link = Vector3d(0, 0, 0.15);//0.18 distance to touch base of the grip.
-		const Vector3d robot_offset=Vector3d(0.0,0.3,0.15);//offset in world, given by world urdf
+		const Vector3d robot_offset=Vector3d(0.0,0.0,0.15);//offset in world, given by world urdf
 		const VectorXd home_q = (VectorXd(7)<<-1.5,0.0,0.0,-0.707,0.0,0.707,0.707).finished();
 		const VectorXd basket_top_q = (VectorXd(7)<<-1.5,-1.2,0.0,-3.0,0.0,1.8,0.707).finished();
 		const double open_finger=0.06; //joint position of open finger
@@ -1046,10 +1046,20 @@ int main() {
 
 
 	//create SHELFS. fill with info from worlf urdf
-	Shelf Shelf1;
-	Shelf1.origin_xyz<<0.0 ,-0.3, 0.0;
-	Shelf1.origin_rpy<<0 ,0 , 0;
-	Shelf1.depth=0.463;
+	Shelf Shelf2;
+	Shelf2.origin_xyz<<2.35, -0.8, 0.0;
+	Shelf2.origin_rpy<<0 ,0 , 0;
+	Shelf2.depth=0.463;
+
+	Shelf Shelf8;
+	Shelf8.origin_xyz<<-2.35 ,-1.75, 0.0;
+	Shelf8.origin_rpy<<0 ,0 , 3.14159265358;
+	Shelf8.depth=0.463;
+
+	Shelf Shelf13;
+	Shelf13.origin_xyz<<-1.3 ,0.8 ,0.0;
+	Shelf13.origin_rpy<<0 ,0 , 3.14159265358;
+	Shelf13.depth=0.463;
 
 
 
@@ -1060,8 +1070,8 @@ int main() {
 	Object1.height=0.128;
 	Object1.width=0.0888;
 	Object1.depth=0.0888;
-	Object1.obj_offset<<0.0, -0.4, 0.7+Object1.height/2;
-	Object1.shelf=Shelf1;
+	Object1.obj_offset<<2.35 ,-0.9 ,0.7+Object1.height/2;
+	Object1.shelf=Shelf2;
 	
 	//Start OBJECT2 JAR2
 	Objects_class Object2;
@@ -1070,8 +1080,8 @@ int main() {
 	Object2.height=0.128;
 	Object2.width=0.0888;
 	Object2.depth=0.0888;
-	Object2.obj_offset<<-0.4 ,-0.4, 0.41+Object2.height/2;
-	Object2.shelf=Shelf1;
+	Object2.obj_offset<<-1.3, 0.8 ,1.0+Object2.height/2;
+	Object2.shelf=Shelf13;
 
 	//Start OBJECT3 JAR3
 	Objects_class Object3;
@@ -1080,8 +1090,8 @@ int main() {
 	Object3.height=0.128;
 	Object3.width=0.0888;
 	Object3.depth=0.0888;
-	Object3.obj_offset<<0.4 ,-0.4 ,1.0+Object3.height/2;
-	Object3.shelf=Shelf1;
+	Object3.obj_offset<<-2.35, -1.65, 0.49+Object3.height/2;
+	Object3.shelf=Shelf8;
 
 
 
@@ -1162,6 +1172,8 @@ fTimerDidSleep = timer.waitForNextLoop();
 			//last point is shelf position
 
 			Position=current_object->shelf.position_front_shelf();
+			cout<<"target "<<Position.transpose()<<endl;
+			cout<<"current "<<Robot.q(0)<< " "<<Robot.q(1) << " "<<Robot.q(2)<<endl;
 			Robot.navigation_waypoints = MatrixXd(3,1);//we will need a function that gives all the trayectory... last point is in front of shelf
 			Robot.navigation_waypoints<<Position(0),Position(1),Position(2);
 

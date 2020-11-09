@@ -122,6 +122,8 @@ int main() {
 	graphics->getCameraPose(camera_name, camera_pos, camera_vertical, camera_lookat);
 	graphics->showLinkFrame(true, robot_name, ee_link_name, 0.18);  // robot link 7 frame
 	graphics->showLinkFrame(true, obj_name, "link6", 0.15);  // jar1 frame
+	graphics->showLinkFrame(true, obj2_name, "link6", 0.15);  // jar1 frame
+	graphics->showLinkFrame(true, obj3_name, "link6", 0.15);  // jar1 frame
 	//graphics->showLinkFrame(true, basket_name, "basket_wall1", 0.15);  
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
@@ -338,6 +340,11 @@ int main() {
 				// then drag the mouse over a link to start applying a force to it.
 			}
 		}
+
+		//UNCOMMENT TO FIND DESIRED CAMARA POSITION.
+		// cout<<"camera_pos"<<camera_pos.transpose()<<endl;
+		// cout<<"camera_vertical"<<camera_vertical.transpose()<<endl;
+		// cout<<"camera_lookat"<<camera_lookat.transpose()<<endl;
 
 	}
 
