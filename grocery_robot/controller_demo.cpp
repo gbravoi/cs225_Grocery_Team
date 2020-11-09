@@ -109,11 +109,7 @@ std::ostream& operator<<(std::ostream& out, const Simulation_states value){
 
 
 //other values
-const double SHELF_SAFE_DIST=0.3;
-const Matrix3d R_hor_ee ((Matrix3d() << 1.57079632679,1.57079632679, 0.0,
-									0.0, 0.0, -1.0,
-									-1.57079632679, 1.57079632679, 0.0).finished());//world enf effector horizontal position
-
+const double SHELF_SAFE_DIST=0.1;
 Simulation_states current_simulation_state=Simulation_states::GO_TO_SHELF; //in this state while writting function.
 
 
@@ -131,8 +127,24 @@ Matrix3d Rot_z_matrix(double angle){
 			sin(angle),cos(angle),0,
 			0,0,1;
 	return Rot;
-
 }
+Matrix3d Rot_y_matrix(double angle){
+	Matrix3d Rot;
+	Rot<<cos(angle), 0,sin(angle),
+		0,1,0
+		-sin(angle),0,cos(angle);
+	return Rot;
+}
+Matrix3d Rot_x_matrix(double angle){
+	Matrix3d Rot;
+	Rot<<1,0,0,
+		0, cos(angle), -sin(angle),
+		0,sin(angle),cos(angle);
+	return Rot;
+}
+const Matrix3d R_hor_ee=Rot_x_matrix(-1.57079632679)*Rot_z_matrix(-0.78539816339);//end effector horizontal
+const Matrix3d R_down_ee=Rot_x_matrix(-3.14)*Rot_z_matrix(-0.78539816339);//end efector looking down
+
 //------------------------------------------
 //-------------CLASSES DEFINITION-----------
 //------------------------------------------
@@ -158,12 +170,12 @@ Matrix3d Shelf::get_Rot_matrix(){
 Matrix3d Shelf::get_eef_orientation(){
 	//return orientation needed for the robot end effector face the shelf
 	Matrix3d Rot=get_Rot_matrix();
-	return Rot*R_hor_ee;
+	return Rot_z_matrix(-3.14159265359)*Rot*R_hor_ee;
 };
  Vector3d Shelf::position_front_shelf(){
 	 //distance is in the y direction of the shelf
 	 Vector3d y_distance;
-	 y_distance<<0, SHELF_SAFE_DIST,0;
+	 y_distance<<0, SHELF_SAFE_DIST+depth,0;
 
 	 //rotation in world
 	Matrix3d Rot=get_Rot_matrix();
@@ -377,8 +389,8 @@ void Grocery_Robot::generate_to_basket_waypoints(){
 
 
 	//basket frame
-	home_to_basket_waypoints.col(0)<<0.1,0,0.8;//POSITION OF THE TOP OF THE BASKET
-	home_to_basket_waypoints.col(1)<<0.25,0,0.4;//POSITION OF THE TOP OF THE BASKET
+	home_to_basket_waypoints.col(0)<<0.15,0,0.7;//POSITION OF THE TOP OF THE BASKET
+	home_to_basket_waypoints.col(1)<<0.15,0,0.4;//POSITION OF THE TOP OF THE BASKET
 };
 
 void Grocery_Robot::set_robot_state(Robot_States robot_state){
@@ -435,7 +447,7 @@ Matrix3d Grocery_Robot::Rot_h_ee_basket(){
 	/**
 	 * Rotation matrix that gives orientation looking to the basket horizontally
 	 **/
-	return Rot_z_matrix(1.57)*R_hor_ee;
+	return Rot_z_matrix(-1.57)*R_hor_ee;
 };
 
 Matrix3d Grocery_Robot::get_base_rotation(){
@@ -927,6 +939,8 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 				arrived=Robot->checkWaypoints(Robot->home_to_basket_waypoints, 2, 1);
 			}
 			target_pos = Robot->next_waypoint_ee;
+			cout<<"target"<<target_pos.transpose()<<endl;
+			cout<<"current"<<Robot->x.transpose()<<endl;
 			//if((target_pos-Robot->x).norm()<=control_threshold){
 			if(arrived && (target_pos-Robot->x).norm()<=control_threshold){
 					Robot->set_robot_state(Robot_States::R_IDLE);
@@ -1018,7 +1032,8 @@ int main() {
 	Robot.robot=robot; //sai2 model
 	Robot.dof = robot->dof();
 	Robot.HomePosition=VectorXd::Zero(Robot.dof);
-	Robot.HomePosition<<0.0,0.0,0.0, -0.798855 ,-0.328792, -0.001426 ,-0.006871, -0.000757, -0.053838 ,-0.000491 ,-0.039092, -0.119215;
+	//Robot.HomePosition<<0.0,0.0,0.0, 0.798855 ,-0.328792, -0.001426 ,-0.006871, -0.000757, -0.053838 ,-0.000491 ,-0.039092,- -0.119215;
+	Robot.HomePosition<<0.0,0.0,0, -1.57079632679, -0.785, 0, -2.356, 0, 1.571, 0.785 ,0.04, -0.04;
 	Robot.Update_states();
 	Robot.base_position<<Robot.q(0),Robot.q(1),Robot.q(2);
 
@@ -1033,7 +1048,7 @@ int main() {
 	Robot.navigation_waypoints.transposeInPlace();
 
 	//Robot.home_to_basket_waypoints = MatrixXd(7,3);
-	Robot.home_to_basket_waypoints = MatrixXd(3,2);//IN ROBOT FRAME
+	Robot.home_to_basket_waypoints = MatrixXd(3,3);//IN ROBOT FRAME
 	Robot.waypoint_iterator = -1;
 	// Robot.Current_state=Robot_States::NAVIGATING;
 	Robot.set_robot_state(Robot_States::R_IDLE);
@@ -1108,6 +1123,7 @@ int main() {
 
 
 
+	
 
 	runloop = true;
 	while (runloop)
@@ -1146,7 +1162,10 @@ fTimerDidSleep = timer.waitForNextLoop();
 		//neede variables for state machine
 		Vector3d Position;
 		double Nav_Vmax;
-		bool arrived;
+		bool arrived=false;
+		Vector3d target_pos;//debug
+
+
 
 
 
@@ -1169,26 +1188,36 @@ fTimerDidSleep = timer.waitForNextLoop();
 			 * move platform with arm in home position.
 			 **/
 			//Define waypoints to go to shelf
-			//last point is shelf position
+			//last point is shelf position (x,y,theta)
 
+			//position fron of shelf x,y,z
 			Position=current_object->shelf.position_front_shelf();
-			cout<<"target "<<Position.transpose()<<endl;
-			cout<<"current "<<Robot.q(0)<< " "<<Robot.q(1) << " "<<Robot.q(2)<<endl;
-			Robot.navigation_waypoints = MatrixXd(3,1);//we will need a function that gives all the trayectory... last point is in front of shelf
-			Robot.navigation_waypoints<<Position(0),Position(1),Position(2);
 
-			arrived=Robot.checkWaypoints(Robot.navigation_waypoints, 1, 0);
-			control_torques=Navigate_to_point(&RobotController,Robot.next_waypoint_base,0.5);
+			Robot.navigation_waypoints = MatrixXd(3,2);//we will need a function that gives all the trayectory... last point is in front of shelf
+			//add needed rotation
+			Robot.navigation_waypoints.col(0)<<0,0,0;
+			Robot.navigation_waypoints.col(1)<<Position(0),Position(1),0;
+			
+			cout<<"goal"<<Robot.next_waypoint_base,transpose()<<endl;
+			cout<<"current"<<Robot.q(0)<<" "<<Robot.q(1)<<" "<<Robot.q(2)<<endl;
+			arrived=Robot.checkWaypoints(Robot.navigation_waypoints, 2, 0);
+			control_torques=Navigate_to_point(&RobotController,Robot.next_waypoint_base,0.7);
 			if(arrived){
 				//go next state, pick from shelf
 				Robot.set_robot_state(Robot_States::MOVING_ARM);
-				set_simulation_state(Simulation_states::PICK_SHELF_OBJECTS);
+				//set_simulation_state(Simulation_states::PICK_SHELF_OBJECTS);//skipt for test
+				//test lines:
+				current_object=list_objects.front();
+				list_objects.pop_front();//delete from the list
+				set_simulation_state(Simulation_states::GO_TO_SHELF);//go to the next shelf
+				//end test lines
+
 				control_torques.setZero();
-			}else{
-				control_torques=Navigate_to_point(&RobotController,Robot.next_waypoint_base,0.5);
 			}
 
 
+			
+			
 			
 
 			break;
@@ -1205,7 +1234,8 @@ fTimerDidSleep = timer.waitForNextLoop();
 				}else{//else update current object
 					current_object=list_objects.front();
 					list_objects.pop_front();//delete from the list
-					Robot.set_robot_state(Robot_States::MOVING_ARM);
+					set_simulation_state(Simulation_states::GO_TO_SHELF);//go to the next shelf
+					Robot.set_robot_state(Robot_States::R_IDLE);
 					control_torques=pick_shelf_objects(&RobotController,current_object);
 				}
 				break;

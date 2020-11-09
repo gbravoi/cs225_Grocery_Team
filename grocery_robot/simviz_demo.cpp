@@ -121,15 +121,17 @@ int main() {
 	Eigen::Vector3d camera_pos, camera_lookat, camera_vertical;
 	graphics->getCameraPose(camera_name, camera_pos, camera_vertical, camera_lookat);
 	graphics->showLinkFrame(true, robot_name, ee_link_name, 0.18);  // robot link 7 frame
+	graphics->showLinkFrame(true, robot_name, "base_link", 0.18);  // robot link 7 frame
 	graphics->showLinkFrame(true, obj_name, "link6", 0.15);  // jar1 frame
 	graphics->showLinkFrame(true, obj2_name, "link6", 0.15);  // jar1 frame
 	graphics->showLinkFrame(true, obj3_name, "link6", 0.15);  // jar1 frame
 	//graphics->showLinkFrame(true, basket_name, "basket_wall1", 0.15);  
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
-	robot->_q(3) = -0.8;
-	robot->_q(10) = 0.04;
-	robot->_q(11) = -0.04;
+	// robot->_q(3) = -0.8;
+	// robot->_q(10) = 0.04;
+	// robot->_q(11) = -0.04;
+	robot->_q<<0.0,0.0,0, -1.57079632679, -0.785, 0, -2.356, 0, 1.571, 0.785 ,0.04, -0.04;//home position
 	robot->updateModel();
 
 	//MOD FOR SEVERAL OBJECT
