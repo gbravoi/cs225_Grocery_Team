@@ -609,8 +609,7 @@ void Controller::Arm_Local_Position_Orientation_controller(Vector3d goal_pos_in_
 	//need orientation in world frame
 	R_des=Robot->Tranform_rot_base_to_world(R_des);
 
-	// cout<<"target"<<goal_pos_in_base.transpose()<<endl;
-	// cout<<"current"<<Robot->x_w.transpose()<<endl;
+
 
 
 	//compute nu of Vmax
@@ -634,7 +633,7 @@ void Controller::Arm_Local_Position_Orientation_controller(Vector3d goal_pos_in_
 	else{
 		//find error in rotation
 		delta_phi = -0.5 * (Robot->R_w.col(0).cross(R_des.col(0)) + Robot->R_w.col(1).cross(R_des.col(1)) + Robot->R_w.col(2).cross(R_des.col(2)));
-		//cout<<"delta_phi"<<delta_phi<<endl;
+
 		Vector3d pd_w;
 
 		//compute nu of Vmax for delta phi
@@ -985,9 +984,6 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			 **/
 			force_r=Robot->force_finger_r;
 			force_r=Robot->force_finger_l;
-			//cout<<"r:"<<force_r.norm()<<" l"<< force_l.norm()<<endl;
-			//cout<<Robot->q(11)<<endl;
-
 			//when force detected, hold for a momnet (counter time) then rise, and go next state
 			if(force_r.norm()>0.01 || force_l.norm()>0.01){
 				if (pick_shelf_objects_counter>=hold_time){
@@ -1008,7 +1004,6 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 						target_pos(1)=pos_front_shelf(1);
 						target_pos(3)=Robot->x_w(2);
 						pick_shelf_objects_counter=0;//reset counter
-						cout<<"target poss leaving "<<target_pos.transpose()<<endl;
 					}
 				}else{
 					pick_shelf_objects_counter+=1;
@@ -1021,8 +1016,6 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 						//move a little up
 						//target_pos<<Robot->x(0),Robot->x(1),Robot->x(2);//base frame
 						target_pos(2)+=0.05;//this is the distance that will go up, latter replace depending on the shelf.
-						// Robot->base_position<<Robot->q(0),Robot->q(1),Robot->q(2);
-						cout<<"target poss counter "<<target_pos.transpose()<<endl;
 					}
 				}
 			}else{
@@ -1039,8 +1032,6 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			 **/
 			//target position set in the previous step
 			//force
-			cout<<"target back "<<target_pos.transpose()<<endl;
-			cout<<"pos back "<<Robot->x_w.transpose()<<endl;
 			RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des,V_max);
 			RobotController->Gripper_controller(Robot->pick_up_force);//gripper will hold in the designated force
 			control_torques=RobotController->Return_torques();
@@ -1233,7 +1224,7 @@ int main() {
 
 	//list of objects to pickup in the program ("shopping list")
 	std::list<Objects_class*> list_objects;
-	//list_objects.push_back(&Object1);
+	list_objects.push_back(&Object1);
 	list_objects.push_back(&Object2);
 	list_objects.push_back(&Object3);
 	
