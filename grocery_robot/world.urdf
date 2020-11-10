@@ -28,10 +28,10 @@
 
 	<!--while we dont have basket with right properties, i will place a jar here-->
 	<robot name="basket">
-		<model dir="./resources" path="jar.urdf" name="basket" />
+		<model dir="./resources" path="basket.urdf" name="basket" />
 		<!--<model dir="./resources" path="basket.urdf" name="basket" />-->
 		<!--<origin xyz="0.15 0.3 0.3" rpy="0 0 0" />-->
-		<origin xyz="0.6 -0.5 0.02" rpy="0 0 0" />
+		<origin xyz="0.6 -0.5 0.3" rpy="0 0 0" />
 	</robot>
 
 	

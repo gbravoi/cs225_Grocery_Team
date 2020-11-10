@@ -34,7 +34,7 @@ const string obj2_file = "./resources/jar.urdf";
 const string obj3_name = "jar3";
 const string obj3_file = "./resources/jar.urdf";
 const string basket_name = "basket";
-const string basket_file = "./resources/jar.urdf";
+const string basket_file = "./resources/basket.urdf";
 
 RedisClient redis_client;
 
