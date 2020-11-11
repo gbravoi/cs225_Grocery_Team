@@ -29,6 +29,12 @@
     </inertial>
   </link>
 
+
+
+
+
+
+
   <!-- MOBILE BASE + LINK 0 OF PANDA ARM -->
   <link name = "base_link">
     <inertial>
@@ -38,10 +44,24 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="../../../model/mmp_panda/meshes/panda_BaseCombo.obj" />
+       <mesh filename="../../../model/mmp_panda/meshes/panda_BaseCombo.obj" />
       </geometry>
     </visual>
+    <visual>
+      <origin xyz="0.15 0.0 -0.075" rpy="0 0 0" />
+      <geometry>
+       <box size="0.6 0.5 0.15" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.0 0.0 -0.075" rpy="0 0 0" />
+      <geometry>
+       <box size="1 0.5 0.15" />
+      </geometry>
+    </collision>
   </link>
+
+  
 
   <!-- PANDA ARM LINKS --> 
 <!--<link name="link0">
@@ -262,6 +282,11 @@
     <limit effort="87" lower="-2.8973" upper="2.8973" velocity="2.1750" />
   </joint>
 -->
+
+
+
+
+    <!--PANDA JOINTS-->
   <joint name="joint1" type="revolute">
       <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.8973" soft_upper_limit="2.8973"/>
       <origin rpy="0 0 1.5708" xyz="0 0 0.333"/>
@@ -405,4 +430,4 @@
       <limit effort="20" lower="0.0" upper="0.04" velocity="0.2"/>
       <!-- <mimic joint="finger_joint1" /> -->
     </joint>
-</robot> 
+</robot>

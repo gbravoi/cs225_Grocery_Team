@@ -120,12 +120,11 @@ int main() {
 	auto graphics = new Sai2Graphics::Sai2Graphics(world_file, true);
 	Eigen::Vector3d camera_pos, camera_lookat, camera_vertical;
 	graphics->getCameraPose(camera_name, camera_pos, camera_vertical, camera_lookat);
-	graphics->showLinkFrame(true, robot_name, ee_link_name, 0.18);  // robot link 7 frame
-	graphics->showLinkFrame(true, robot_name, "base_link", 0.18);  // robot link 7 frame
-	graphics->showLinkFrame(true, obj_name, "link6", 0.15);  // jar1 frame
-	graphics->showLinkFrame(true, obj2_name, "link6", 0.15);  // jar1 frame
-	graphics->showLinkFrame(true, obj3_name, "link6", 0.15);  // jar1 frame
-	//graphics->showLinkFrame(true, basket_name, "basket_wall1", 0.15);  
+	// graphics->showLinkFrame(true, robot_name, ee_link_name, 0.18);  // robot link 7 frame
+	// graphics->showLinkFrame(true, obj_name, "link6", 0.15);  // jar1 frame
+	// graphics->showLinkFrame(true, obj2_name, "link6", 0.15);  // jar1 frame
+	// graphics->showLinkFrame(true, obj3_name, "link6", 0.15);  // jar1 frame
+	// graphics->showLinkFrame(true, basket_name, "link5", 0.15);  
 	// load robots
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
 	// robot->_q(3) = -0.8;

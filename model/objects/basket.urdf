@@ -45,109 +45,139 @@
     </link>
 
   <!--BASKET LINKS-->
+    <link name="base_basket"><!--link 6-->
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <mass value="0.1" />
+        <inertia ixx="1e-2" iyy="1e-2" izz="1e-2" ixy="0" ixz="0" iyz="0" />
+      </inertial>
+      <visual>
+        <!-- <origin xyz="0 0 0" rpy="0 0 0" /> -->
+        <origin xyz="0 0 0" rpy="1.57079632679 0 1.57079632679" />
+        <geometry>
+            <mesh filename="../../../model/objects/basket.obj"/>
+           <box size="0.3 0.5 0.014" />
+        </geometry>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="0.3 0.5 0.014" />
+        </geometry>
+      </collision>
+    </link>
+
+
     <link name="basket_wall1">
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0" />
-        <mass value="0.1" />
-        <inertia ixx="1e-2" iyy="1e-2" izz="1e-2" ixy="0" ixz="0" iyz="0" />
+        <mass value="1e-10" />
+        <inertia ixx="1e-10" iyy="1e-10" izz="1e-10" ixy="0" ixz="0" iyz="0" />
       </inertial>
       <visual>
-        <origin xyz="0.0 0.0 0" rpy="0 0 0" />
+        <!-- <origin xyz="0.15 0.0 0.124" rpy="0 0 0" />
         <geometry>
-          <box size="0.005 0.5 0.25" />
+          <box size="0.005 0.45 0.22" />
         </geometry>
         <material name="material">
               <color rgba="0.956 0.815 0.24 1.0" />
-        </material>
+        </material> -->
     </visual>
       <collision>
-       <origin xyz="0.0 0.0 0" rpy="0 0 0" />
+       <origin xyz="0.15 0.0 0.124" rpy="0 0 0" />
         <geometry>
-          <box size="0.005 0.5 0.25" />
+          <box size="0.005 0.45 0.22" />
         </geometry>
       </collision>
     </link>
-    <link name="basket_wall2">
+  <link name="basket_wall2">
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0" />
-        <mass value="0.1" />
-        <inertia ixx="1e-2" iyy="1e-2" izz="1e-2" ixy="0" ixz="0" iyz="0" />
+        <mass value="1e-10" />
+        <inertia ixx="1e-10" iyy="1e-10" izz="1e-10" ixy="0" ixz="0" iyz="0" />
       </inertial>
       <visual>
-        <origin xyz="0.3 0.0 0" rpy="0 0 0" />
+        <!-- <origin xyz="-0.15 0.0 0.124" rpy="0 0 0" />
         <geometry>
-          <box size="0.005 0.5 0.25" />
+          <box size="0.005 0.45 0.22" />
         </geometry>
         <material name="material">
               <color rgba="0.956 0.815 0.24 1.0" />
-        </material>
+        </material> -->
     </visual>
       <collision>
-        <origin xyz="0.3 0.0 0" rpy="0 0 0" />
+        <origin xyz="-0.15 0.0 0.124" rpy="0 0 0" />
         <geometry>
-          <box size="0.005 0.5 0.25" />
+          <box size="0.005 0.45 0.22" />
         </geometry>
       </collision>
     </link>
-    <link name="basket_wall3">
+   <link name="basket_wall3">
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0" />
-        <mass value="0.1" />
-        <inertia ixx="1e-2" iyy="1e-2" izz="1e-2" ixy="0" ixz="0" iyz="0" />
+        <mass value="1e-10" />
+        <inertia ixx="1e-10" iyy="1e-10" izz="1e-10" ixy="0" ixz="0" iyz="0" />
       </inertial>
       <visual>
-         <origin xyz="0.15 0.25 0" rpy="0 0 0" />
+         <!-- <origin xyz="0 0.225 0.124" rpy="0 0 0" />
       <geometry>
-        <box size="0.29 0.005 0.24" />
+        <box size="0.29 0.005 0.22" />
       </geometry>
         <material name="material">
               <color rgba="0.956 0.815 0.24 1.0" />
-        </material>
+        </material> -->
     </visual>
       <collision>
-         <origin xyz="0.15 0.25 0" rpy="0 0 0" />
+         <origin xyz="0 0.225 0.124" rpy="0 0 0" />
       <geometry>
-        <box size="0.29 0.005 0.24" />
+        <box size="0.29 0.005 0.22" />
       </geometry>
       </collision>
     </link>
     <link name="basket_wall4">
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0" />
-        <mass value="0.1" />
-        <inertia ixx="1e-2" iyy="1e-2" izz="1e-2" ixy="0" ixz="0" iyz="0" />
+        <mass value="1e-10" />
+        <inertia ixx="1e-10" iyy="1e-10" izz="1e-10" ixy="0" ixz="0" iyz="0" />
       </inertial>
       <visual>
-         <origin xyz="0.15 -0.25 0" rpy="0 0 0" />
+         <!-- <origin xyz="0 -0.225 0.124" rpy="0 0 0" />
       <geometry>
         <box size="0.29 0.005 0.24" />
       </geometry>
         <material name="material">
               <color rgba="0.956 0.815 0.24 1.0" />
-        </material>
+        </material> -->
     </visual>
       <collision>
-         <origin xyz="0.15 -0.25 0" rpy="0 0 0" />
+         <origin xyz="0 -0.225 0.124" rpy="0 0 0" />
       <geometry>
         <box size="0.29 0.005 0.24" />
       </geometry>
       </collision>
     </link>
-    <link name="basket_wall5">
+
+    <link name="handle">
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0" />
-        <mass value="0.1" />
-        <inertia ixx="1e-2" iyy="1e-2" izz="1e-2" ixy="0" ixz="0" iyz="0" />
+        <mass value="1e-10" />
+        <inertia ixx="1e-10" iyy="1e-10" izz="1e-10" ixy="0" ixz="0" iyz="0" />
       </inertial>
       <visual>
-         <origin xyz="0.15 0.0 -0.125" rpy="0 0 0" />
+         <origin xyz="0 0.0 0.34" rpy="0 0 0 " />
       <geometry>
-        <box size="0.3 0.5 0.005" />
+        <box size="0.03 0.35 0.014" />
       </geometry>
         <material name="material">
               <color rgba="0.956 0.815 0.24 1.0" />
         </material>
     </visual>
+     <collision>
+         <origin xyz="0 0.0 0.34" rpy="0 0 0 " />
+      <geometry>
+        <box size="0.03 0.35 0.14" />
+      </geometry>
+    </collision>
     </link>
 
 
@@ -191,48 +221,52 @@
 
 
      <!-- BASKET JOINTS-->
-     <joint name="join_basket_0" type="revolute">
+    <joint name="join_basket_4" type="revolute">
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <parent link="link5"/>
+      <child link="base_basket"/>
+        <axis xyz="0 0 1"/>
+      <limit effort="21.3" lower="0" upper="6.28" velocity="21.3"/>
+    </joint>
+
+    <joint name="join_basket_0" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="base_basket"/>
       <child link="basket_wall1"/>
         <axis xyz="0 0 1"/>
       <limit effort="21.3" lower="0" upper="6.28" velocity="21.3"/>
     </joint>
 
-    <joint name="join_basket_1" type="fixed">
+      <joint name="join_basket_1" type="fixed">
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <parent link="basket_wall1"/>
+      <parent link="base_basket"/>
       <child link="basket_wall2"/>
         <axis xyz="0 0 1"/>
       <limit effort="21.3" lower="0" upper="6.28" velocity="21.3"/>
     </joint>
     <joint name="join_basket_2" type="fixed">
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <parent link="basket_wall2"/>
+      <parent link="base_basket"/>
       <child link="basket_wall3"/>
         <axis xyz="0 0 1"/>
       <limit effort="21.3" lower="0" upper="6.28" velocity="21.3"/>
     </joint>
     <joint name="join_basket_3" type="fixed">
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <parent link="basket_wall3"/>
+      <parent link="base_basket"/>
       <child link="basket_wall4"/>
         <axis xyz="0 0 1"/>
       <limit effort="21.3" lower="0" upper="6.28" velocity="21.3"/>
     </joint>
-        <joint name="join_basket_4" type="fixed">
+
+   <joint name="join_basket_5" type="fixed">
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <parent link="basket_wall4"/>
-      <child link="basket_wall5"/>
+      <parent link="base_basket"/>
+      <child link="handle"/>
         <axis xyz="0 0 1"/>
       <limit effort="21.3" lower="0" upper="6.28" velocity="21.3"/>
     </joint>
-<!--     <joint name="joint4" type="spherical">
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <parent link="link3"/>
-      <child link="link4"/>
-      <limit effort="100" lower="-100" upper="100" velocity="100"/>
-    </joint> -->
+
 </robot>
 
 </xml>
