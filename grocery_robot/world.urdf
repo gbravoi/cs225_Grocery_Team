@@ -225,13 +225,13 @@
 
 	<camera name="camera_fixed">
 		<!--view center all-->
- 		<!-- <position xyz="5.16502 ,0.323767, 0.826771" />
+ 		<position xyz="5.16502 ,0.323767, 0.826771" />
 		<vertical xyz="0.0 0 1.0" />
-		<lookat xyz="4.18688, 0.121413, 0.778789" />  -->
+		<lookat xyz="4.18688, 0.121413, 0.778789" /> 
 		<!-- robot top view when is 0,0 -->
-	 	<position xyz="-0.166922 -0.122112   1.79856" />
+	 	<!-- <position xyz="-0.166922 -0.122112   1.79856" />
 		<vertical xyz="-0.0482529 0.00598945   0.998817" />
-		<lookat xyz="-0.00747756   -0.124966    0.811362" /> 
+		<lookat xyz="-0.00747756   -0.124966    0.811362" />  -->
 	</camera>
 
 </world>
