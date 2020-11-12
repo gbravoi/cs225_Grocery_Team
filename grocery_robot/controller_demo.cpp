@@ -158,6 +158,7 @@ class Shelf{
 		Vector3d origin_xyz;//position
 		Vector3d origin_rpy;//orientation
 		double depth; //depth of the shelf
+		double height; //used in the conveyor to indica position of the surface
 
 		//functions
 		Matrix3d get_eef_orientation();
@@ -1325,6 +1326,15 @@ int main() {
 	Shelf13.origin_xyz<<-1.3 ,0.8 ,0.0;
 	Shelf13.origin_rpy<<0 ,0 , 3.14159265358;
 	Shelf13.depth=0.463;
+
+
+	//create conveyor (use shelf structure)
+	Shelf Conveyor;
+	Conveyor.origin_xyz<<-2.0 ,-3.0, 0;
+	Conveyor.origin_rpy<<0 ,0 , 0;//use this to indicate where is the front of the conveyor
+	Conveyor.depth=0.1;
+	Conveyor.height=0.543;
+
 
 
 

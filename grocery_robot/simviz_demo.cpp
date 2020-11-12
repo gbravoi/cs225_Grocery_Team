@@ -343,9 +343,9 @@ int main() {
 		}
 
 		//UNCOMMENT TO FIND DESIRED CAMARA POSITION.
-		// cout<<"camera_pos"<<camera_pos.transpose()<<endl;
-		// cout<<"camera_vertical"<<camera_vertical.transpose()<<endl;
-		// cout<<"camera_lookat"<<camera_lookat.transpose()<<endl;
+		cout<<"camera_pos"<<camera_pos.transpose()<<endl;
+		cout<<"camera_vertical"<<camera_vertical.transpose()<<endl;
+		cout<<"camera_lookat"<<camera_lookat.transpose()<<endl;
 
 	}
 
