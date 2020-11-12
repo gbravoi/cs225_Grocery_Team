@@ -146,8 +146,8 @@ Matrix3d Rot_x_matrix(double angle){
 	return Rot;
 }
 const Matrix3d R_hor_ee=Rot_x_matrix(-1.57079632679)*Rot_z_matrix(-0.78539816339);//end effector horizontal
-const Matrix3d R_down_ee=Rot_x_matrix(-3.14)*Rot_z_matrix(-0.78539816339);//end efector looking down
 const Matrix3d R_ver_ee=Rot_y_matrix(-1.57079632679)*R_hor_ee;//end effector vertical
+const Matrix3d R_down_ee=Rot_x_matrix(-3.14)*Rot_z_matrix(-0.78539816339);//end efector looking down
 
 //------------------------------------------
 //-------------CLASSES DEFINITION-----------
@@ -158,6 +158,7 @@ class Shelf{
 		Vector3d origin_xyz;//position
 		Vector3d origin_rpy;//orientation
 		double depth; //depth of the shelf
+		double height; //used in the conveyor to indica position of the surface
 
 		//functions
 		Matrix3d get_eef_orientation();
@@ -868,28 +869,26 @@ VectorXd Navigate_to_point(Controller *RobotController , Vector3d point_world, d
 	return RobotController->Return_torques();
 }
 
+///////////////////////
+///////PICK AND PLACE////
+////////////////////////
 
-
-//**********PICK AND PLACE SUB-STATE MACHINES**************
-
+//comon variables
 double pick_shelf_objects_counter=0;
+Vector3d ref_pos;//used when neede to keep the old position of the object
 Vector3d target_pos;
 Vector2d pos_front_shelf;//save the initial position in front shelf
 bool arrived = false;
 
+//**********common functions***********
 
-VectorXd moving_arm(Controller *RobotController,  double control_threshold){
-	Grocery_Robot* Robot=RobotController->Robot;
-	VectorXd control_torques= VectorXd::Zero(Robot->dof);
-	cout<<"target"<<target_pos.transpose()<<endl;
-	cout<<"current"<<Robot->x_w.transpose()<<endl;
-	
+Vector3d moving_arm(Controller* RobotController, Grocery_Robot* Robot, double control_threshold){
+	Vector3d control_torques;
 
 	//move to target
 	RobotController->Arm_World_Position_Orientation_controller(target_pos);//control arm and platform, need both to ensure position
 	RobotController->Gripper_controller(0);//gripper open
 	control_torques=RobotController->Return_torques();
-	cout<<"controler"<<control_torques.transpose()<<endl;
 
 	//if reached postion, move to orient
 	if ((target_pos-Robot->x_w).norm()<=control_threshold){
@@ -899,9 +898,8 @@ VectorXd moving_arm(Controller *RobotController,  double control_threshold){
 	return control_torques;
 }
 
-VectorXd orienting_arm(Controller *RobotController, Matrix3d R_des, double V_max){
-	Grocery_Robot* Robot=RobotController->Robot;
-	VectorXd control_torques= VectorXd::Zero(Robot->dof);
+Vector3d orienting_arm(Controller* RobotController, Grocery_Robot* Robot, Matrix3d R_des, double V_max){
+	Vector3d control_torques;
 	Vector3d delta_phi;
 
 	//compute error in rotation
@@ -918,9 +916,8 @@ VectorXd orienting_arm(Controller *RobotController, Matrix3d R_des, double V_max
 	return control_torques;
 }
 
-VectorXd aproaching_object(Controller *RobotController, Matrix3d R_des){
-	Grocery_Robot* Robot=RobotController->Robot;
-	VectorXd control_torques= VectorXd::Zero(Robot->dof);
+Vector3d aproaching_object(Controller* RobotController, Grocery_Robot* Robot,  Vector3d target_pos, Matrix3d R_des){
+	Vector3d control_torques;
 	VectorXd force_ee;
 
 	force_ee=Robot->force_eef;//force sensor on link7 end effector
@@ -939,10 +936,8 @@ VectorXd aproaching_object(Controller *RobotController, Matrix3d R_des){
 	return control_torques;
 }
 
-
-VectorXd picking_object(Controller *RobotController, Matrix3d R_des, double V_max, double up_distance=0.05){
-	Grocery_Robot* Robot=RobotController->Robot;
-	VectorXd control_torques= VectorXd::Zero(Robot->dof);
+Vector3d picking_object(Controller* RobotController, Grocery_Robot* Robot, Matrix3d R_des, double V_max, double up_distance=0.05){
+	Vector3d control_torques;
 	VectorXd force_r;
 	VectorXd force_l;
 	int hold_time=500;//Time to wait when touched the object before start to lift it
@@ -993,9 +988,8 @@ VectorXd picking_object(Controller *RobotController, Matrix3d R_des, double V_ma
 	return control_torques;
 }
 
-VectorXd moving_backwards(Controller *RobotController, Matrix3d R_des, double V_max){
-	Grocery_Robot* Robot=RobotController->Robot;
-	VectorXd control_torques= VectorXd::Zero(Robot->dof);
+Vector3d moving_backwards(Controller* RobotController, Grocery_Robot* Robot, Matrix3d R_des, double V_max){
+	Vector3d control_torques;
 	//target position set in the previous step
 	//force
 	RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des,V_max);
@@ -1009,28 +1003,20 @@ VectorXd moving_backwards(Controller *RobotController, Matrix3d R_des, double V_
 	return control_torques;
 }
 
-
-
 //************pick_shelf_objects*****
+
+
 VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object){
 	Grocery_Robot* Robot=RobotController->Robot;
 	VectorXd control_torques= VectorXd::Zero(Robot->dof);
 	double control_threshold=0.07;
 	// double control_threshold=0.9;
 	double V_max=0.4;
-	int hold_time=500;//Time to wait when touched the object before start to lift it
-	Vector3d x_w;
-	Vector3d delta_phi;
 	Matrix3d R_des;
-	Matrix3d R_w;
-	VectorXd force_r;
-	VectorXd target_q;
-	VectorXd force_l;
-	VectorXd force_ee;
+	Vector3d delta_phi;
 	//define horizontal horientation
 	R_des=Object->shelf.get_eef_orientation();
-	//Todo: align with shelft in other orientations.
-	x_w=Robot->x_w;
+
 	switch (Robot->Current_state)
 	{
 
@@ -1062,11 +1048,14 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			 * this will be the heigh of the object, but keeping safe distance from the shelve
 			 * this could be also reach using way points
 			 * **/
-
+			
 			//targert position a little far away of the object, in front
 			target_pos=Object->get_position_front_object_in_shelf();
 			pos_front_shelf<<target_pos(0),target_pos(1);
-			control_torques=moving_arm(RobotController, control_threshold);
+
+			control_torques=moving_arm(RobotController, Robot,  control_threshold);
+
+			
 			break;
 		case ORIENTING_ARM:
 			/**
@@ -1075,31 +1064,30 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			 **/
 			//targert position a little far away of the object, in front
 			target_pos=Object->get_position_front_object_in_shelf();
-			//compute error in rotation
-			control_torques=orienting_arm( RobotController,  R_des,  V_max);
-
+			control_torques=orienting_arm(RobotController,  Robot,   R_des, V_max);
 			break;
+
 		case APROACHING_OBJECT:
 			/**
 			 * aproach object keeping gripper horizontal
 			 **/
-			target_pos<< Object->x_w[0],Object->x_w[1],Object->x_w[2];
-			control_torques= aproaching_object(RobotController, R_des);
 
-
+			target_pos<< Object->x_w[0],Object->x_w[1],Object->x_w[2];		
+			control_torques=aproaching_object( RobotController,  Robot,    target_pos, R_des);
 			break;
+
 		case PICKING_OBJECT:
 			/**
 			 * Close grip to hold object
 			 **/
-			control_torques=picking_object(RobotController,  R_des,  V_max);
+			control_torques=picking_object( RobotController,  Robot,  R_des, V_max);
 			break;
+
 		case MOVING_BACKWARDS:
 			/**
-			 * Move backward to leave shelf space.
+			 * Move move up
 			 **/
-			//target position set in the previous step
-			control_torques=moving_backwards(RobotController,  R_des,  V_max);
+			control_torques=moving_backwards( RobotController,  Robot,  R_des,  V_max);
 
 			break;
 		case PLACING_OBJECT:
@@ -1112,9 +1100,8 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 			target_pos = Robot->next_waypoint_ee;
 
 			//compute error in rotation
-			R_w=Robot->R_w;
 			R_des=Robot->Rot_h_ee_basket();
-			delta_phi = -0.5 * (R_w.col(0).cross(R_des.col(0)) + R_w.col(1).cross(R_des.col(1)) + R_w.col(2).cross(R_des.col(2)));
+			delta_phi = -0.5 * (Robot->R_w.col(0).cross(R_des.col(0)) + Robot->R_w.col(1).cross(R_des.col(1)) + Robot->R_w.col(2).cross(R_des.col(2)));
 
 
 			if(arrived && (delta_phi.norm()<0.1)){
@@ -1145,6 +1132,7 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 
 
 
+
 //************place basket on conveyor*****
 VectorXd place_basket_in_conveyor(Controller *RobotController , Objects_class *Basket){
 	/**
@@ -1167,44 +1155,44 @@ VectorXd place_basket_in_conveyor(Controller *RobotController , Objects_class *B
 			//targert position:same position the robot already is (home)
 			target_pos<< Robot->x_w[0],Robot->x_w[1],Robot->x_w[2];
 
-
+			control_torques=orienting_arm(RobotController,  Robot,   R_des, V_max);
 			break;
 
-		// case APROACHING_OBJECT:
-		// 	/**
-		// 	 * aproach basket handle
-		// 	 **/
-		// 	target_pos<< Basket->x_w[0],Basket->x_w[1],Basket->x_w[2];
-		// 	target_pos(2)+=Basket->height;//add height, in there the handle is located
-		// 	control_torques=aproaching_object( RobotController,  Robot, target_pos,   R_des);
-		// 	break;
+		case APROACHING_OBJECT:
+			/**
+			 * aproach basket handle
+			 **/
+			target_pos<< Basket->x_w[0],Basket->x_w[1],Basket->x_w[2];
+			target_pos(2)+=Basket->height;//add height, in there the handle is located
+			control_torques=aproaching_object( RobotController,  Robot, target_pos,   R_des);
+			break;
 
-		// case PICKING_OBJECT:
-		// 	/**
-		// 	 * Close grip to hold object, then move up
-		// 	 **/
-		// 	control_torques=picking_object( RobotController,  Robot,  R_des, V_max,up_distance);
-		// 	break;
+		case PICKING_OBJECT:
+			/**
+			 * Close grip to hold object, then move up
+			 **/
+			control_torques=picking_object( RobotController,  Robot,  R_des, V_max,up_distance);
+			break;
 
-		// case PLACING_OBJECT:
-		// 	/**
-		// 	 * Place object in the conveyor
-		// 	 **/
-		// 	//need target=point in surface of the conveyor, cosider height of basket.
-		// 	//move to target
-		// 	RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des);
-		// 	RobotController->Gripper_controller(Robot->pick_up_force);//gripper open
-		// 	control_torques=RobotController->Return_torques();
+		case PLACING_OBJECT:
+			/**
+			 * Place object in the conveyor
+			 **/
+			//need target=point in surface of the conveyor, cosider height of basket.
+			//move to target
+			RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des);
+			RobotController->Gripper_controller(Robot->pick_up_force);//gripper open
+			control_torques=RobotController->Return_torques();
 
-		// 	//if reached postion, release basket
-		// 	if ((target_pos-Robot->x_w).norm()<=control_threshold){
-		// 		Robot->set_robot_state(Robot_States::R_IDLE);
-		// 		control_torques.setZero();
-		// 	}
+			//if reached postion, release basket
+			if ((target_pos-Robot->x_w).norm()<=control_threshold){
+				Robot->set_robot_state(Robot_States::R_IDLE);
+				control_torques.setZero();
+			}
 
 
 
-		// 	break;
+			break;
 
 		default:
 		//default case
@@ -1214,10 +1202,6 @@ VectorXd place_basket_in_conveyor(Controller *RobotController , Objects_class *B
 	
 	}
 }
-
-
-
-
 
 
 
@@ -1293,7 +1277,7 @@ int main() {
 	Robot.aisle_pts.row(0) = aisle_xs;
 	Robot.aisle_pts.row(1) = aisle_ys;
 
-	//create robot object
+
 	Robot.cur_time = timer.elapsedTime();
 	//initialize waypoints
 	Robot.navigation_waypoints = MatrixXd(3,4);
@@ -1302,7 +1286,7 @@ int main() {
 	// 0.0,0.0,0.0;
 	// Robot.navigation_waypoints.transposeInPlace();
 
-	//Robot.home_to_basket_waypoints = MatrixXd(7,3);
+
 	Robot.home_to_basket_waypoints = MatrixXd(3,3);//IN ROBOT FRAME
 	Robot.waypoint_iterator = -1;
 	Robot.set_robot_state(Robot_States::R_IDLE);
@@ -1326,6 +1310,7 @@ int main() {
 
 
 
+
 	//create SHELFS. fill with info from worlf urdf
 	Shelf Shelf2;
 	Shelf2.origin_xyz<<2.35, -0.8, 0.0;
@@ -1341,6 +1326,15 @@ int main() {
 	Shelf13.origin_xyz<<-1.3 ,0.8 ,0.0;
 	Shelf13.origin_rpy<<0 ,0 , 3.14159265358;
 	Shelf13.depth=0.463;
+
+
+	//create conveyor (use shelf structure)
+	Shelf Conveyor;
+	Conveyor.origin_xyz<<-2.0 ,-3.0, 0;
+	Conveyor.origin_rpy<<0 ,0 , 0;//use this to indicate where is the front of the conveyor
+	Conveyor.depth=0.1;
+	Conveyor.height=0.543;
+
 
 
 
@@ -1378,7 +1372,7 @@ int main() {
 
 	//list of objects to pickup in the program ("shopping list")
 	std::list<Objects_class*> list_objects;
-	//list_objects.push_back(&Object1);
+	list_objects.push_back(&Object1);
 	list_objects.push_back(&Object2);
 	list_objects.push_back(&Object3);
 	
@@ -1446,7 +1440,7 @@ fTimerDidSleep = timer.waitForNextLoop();
 		Vector3d Position;
 		double Nav_Vmax;
 		bool arrived=false;
-
+		Vector3d target_pos;//debug
 
 
 
