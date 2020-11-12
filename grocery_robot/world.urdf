@@ -31,7 +31,7 @@
 		<model dir="./resources" path="basket.urdf" name="basket" />
 		<!--<model dir="./resources" path="basket.urdf" name="basket" />-->
 		<!--<origin xyz="0.15 0.3 0.3" rpy="0 0 0" />-->
-		<origin xyz="0.25 0 0.2" rpy="0 0 0" />
+		<origin xyz="0.35 0 0.16" rpy="0 0 0" />
 	</robot>
 
 	
@@ -232,6 +232,10 @@
 	 	<!-- <position xyz="-0.166922 -0.122112   1.79856" />
 		<vertical xyz="-0.0482529 0.00598945   0.998817" />
 		<lookat xyz="-0.00747756   -0.124966    0.811362" />  -->
+		<!--0,0 side-->
+		<!-- <position xyz="0.453596 ,-1.86617, 0.892539" />
+		<vertical xyz="-0.0482529, 0.00598945 ,  0.998817" />
+		<lookat xyz="0.204639 ,-0.904431,  0.778148" />  -->
 	</camera>
 
 </world>

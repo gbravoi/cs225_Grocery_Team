@@ -146,8 +146,9 @@ Matrix3d Rot_x_matrix(double angle){
 	return Rot;
 }
 const Matrix3d R_hor_ee=Rot_x_matrix(-1.57079632679)*Rot_z_matrix(-0.78539816339);//end effector horizontal
-const Matrix3d R_down_ee=Rot_x_matrix(-3.14)*Rot_z_matrix(-0.78539816339);//end efector looking down
-const Matrix3d R_ver_ee=Rot_y_matrix(-1.57079632679)*R_hor_ee;//end effector vertical
+const Matrix3d R_down_ee=Rot_x_matrix(-3.14)*Rot_z_matrix(0.78539816339);//end efector looking down
+const Matrix3d R_down_ver_ee=Rot_x_matrix(-3.14)*Rot_z_matrix(-0.78539816339);//end efector looking down
+const Matrix3d R_ver_ee=Rot_x_matrix(-1.57079632679)*Rot_z_matrix(0.78539816339);//end effector vertical
 
 //------------------------------------------
 //-------------CLASSES DEFINITION-----------
@@ -417,8 +418,8 @@ void Grocery_Robot::generate_to_basket_waypoints(){
 
 
 	//basket frame
-	home_to_basket_waypoints.col(0)<<0.15,0,0.7;//POSITION OF THE TOP OF THE BASKET
-	home_to_basket_waypoints.col(1)<<0.15,0,0.55;//POSITION OF THE TOP OF THE BASKET
+	home_to_basket_waypoints.col(0)<<0.25,0,0.7;//POSITION OF THE TOP OF THE BASKET
+	home_to_basket_waypoints.col(1)<<0.25,0,0.55;//POSITION OF THE TOP OF THE BASKET
 };
 
 void Grocery_Robot::set_robot_state(Robot_States robot_state){
@@ -881,15 +882,14 @@ bool arrived = false;
 VectorXd moving_arm(Controller *RobotController,  double control_threshold){
 	Grocery_Robot* Robot=RobotController->Robot;
 	VectorXd control_torques= VectorXd::Zero(Robot->dof);
-	cout<<"target"<<target_pos.transpose()<<endl;
-	cout<<"current"<<Robot->x_w.transpose()<<endl;
+	//cout<<"target"<<target_pos.transpose()<<endl;
+	//cout<<"current"<<Robot->x_w.transpose()<<endl;
 	
 
 	//move to target
 	RobotController->Arm_World_Position_Orientation_controller(target_pos);//control arm and platform, need both to ensure position
 	RobotController->Gripper_controller(0);//gripper open
 	control_torques=RobotController->Return_torques();
-	cout<<"controler"<<control_torques.transpose()<<endl;
 
 	//if reached postion, move to orient
 	if ((target_pos-Robot->x_w).norm()<=control_threshold){
@@ -940,7 +940,7 @@ VectorXd aproaching_object(Controller *RobotController, Matrix3d R_des){
 }
 
 
-VectorXd picking_object(Controller *RobotController, Matrix3d R_des, double V_max, double up_distance=0.05){
+VectorXd picking_object(Controller *RobotController, Matrix3d R_des, double V_max, Robot_States next_state=Robot_States::MOVING_BACKWARDS, double up_distance=0.05){
 	Grocery_Robot* Robot=RobotController->Robot;
 	VectorXd control_torques= VectorXd::Zero(Robot->dof);
 	VectorXd force_r;
@@ -964,7 +964,7 @@ VectorXd picking_object(Controller *RobotController, Matrix3d R_des, double V_ma
 
 			//if reached position
 			if ((target_pos-Robot->x_w).norm()<=0.02){
-				Robot->set_robot_state(Robot_States::MOVING_BACKWARDS);
+				Robot->set_robot_state(next_state);
 				target_pos(0)=pos_front_shelf(0);//give target for moving backwards. do not change z
 				target_pos(1)=pos_front_shelf(1);
 				target_pos(3)=Robot->x_w(2);
@@ -1155,64 +1155,76 @@ VectorXd place_basket_in_conveyor(Controller *RobotController , Objects_class *B
 	double control_threshold=0.07;
 	// double control_threshold=0.9;
 	double V_max=0.4;
-	Matrix3d R_des=Robot->get_base_rotation()*R_ver_ee;
-	double up_distance=0.1;
+	Matrix3d R_des=Robot->Tranform_rot_base_to_world(R_down_ver_ee);
+	double up_distance=0.4;
 
 	switch (Robot->Current_state)
 	{
+		case MOVING_ARM:
+			/**
+			 * move arm in front of the shelve.
+			 * this will be the heigh of the object, but keeping safe distance from the shelve
+			 * this could be also reach using way points
+			 * **/
+
+			//targert position a little far away of the object, in front
+			target_pos<<Basket->x_w(0),Basket->x_w(1),Basket->x_w(2);
+			target_pos(2)+=Basket->height+0.4;
+			control_torques=moving_arm(RobotController, control_threshold);
+
+			break;
+
 		case ORIENTING_ARM:
 			/**
 			 * orient vertical and open grip
 			 **/
-			//targert position:same position the robot already is (home)
-			target_pos<< Robot->x_w[0],Robot->x_w[1],Robot->x_w[2];
-
-
+			//targert position:same position the robot already is
+			control_torques=orienting_arm(RobotController,   R_des, V_max);
 			break;
 
-		// case APROACHING_OBJECT:
-		// 	/**
-		// 	 * aproach basket handle
-		// 	 **/
-		// 	target_pos<< Basket->x_w[0],Basket->x_w[1],Basket->x_w[2];
-		// 	target_pos(2)+=Basket->height;//add height, in there the handle is located
-		// 	control_torques=aproaching_object( RobotController,  Robot, target_pos,   R_des);
-		// 	break;
+		case APROACHING_OBJECT:
+			/**
+			 * aproach object keeping gripper horizontal
+			 **/
+			target_pos(2)=Basket->x_w(2);
+			control_torques= aproaching_object(RobotController, R_des);
+			break;
 
-		// case PICKING_OBJECT:
-		// 	/**
-		// 	 * Close grip to hold object, then move up
-		// 	 **/
-		// 	control_torques=picking_object( RobotController,  Robot,  R_des, V_max,up_distance);
-		// 	break;
+		case PICKING_OBJECT:
+			/**
+			 * Close grip to hold object, then move up
+			 **/
+			control_torques=picking_object( RobotController, R_des, V_max,Robot_States::PLACING_OBJECT, up_distance);
+			break;
+		
+		case PLACING_OBJECT:
+			/**
+			 * placing object in the basket. Follow waypoints in base frame
+			 **/
+				//move to target
+			target_pos<<-1,-3,0.7;//replace this y the position of the surface of the conveyor
 
-		// case PLACING_OBJECT:
-		// 	/**
-		// 	 * Place object in the conveyor
-		// 	 **/
-		// 	//need target=point in surface of the conveyor, cosider height of basket.
-		// 	//move to target
-		// 	RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des);
-		// 	RobotController->Gripper_controller(Robot->pick_up_force);//gripper open
-		// 	control_torques=RobotController->Return_torques();
+			RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des);//control arm and platform, need both to ensure position
+			RobotController->Gripper_controller(Robot->pick_up_force);//gripper open
+			control_torques=RobotController->Return_torques();
 
-		// 	//if reached postion, release basket
-		// 	if ((target_pos-Robot->x_w).norm()<=control_threshold){
-		// 		Robot->set_robot_state(Robot_States::R_IDLE);
-		// 		control_torques.setZero();
-		// 	}
+			//if reached postion, move to orient
+			if ((target_pos-Robot->x_w).norm()<=control_threshold){
+				Robot->set_robot_state(Robot_States::R_IDLE);
+				control_torques.setZero();
+			}
+			break;
 
-
-
-		// 	break;
 
 		default:
 		//default case
 			control_torques.setZero();
-			Robot->set_robot_state(Robot_States::R_IDLE);
+			//Robot->set_robot_state(Robot_States::R_IDLE);
 			break;
 	
 	}
+
+	return control_torques;
 }
 
 
@@ -1318,7 +1330,7 @@ int main() {
 	Objects_class Basket;//will use same class than object, since it works
 	Basket.link_name = "base_basket";
 	Basket.SAI2_object=basket;
-	Basket.obj_offset<<0.25, 0 ,0.2;
+	Basket.obj_offset<<0.35, 0 ,0.16;
 	Basket.name="Basket";
 	Basket.height=0.34;//the height indicates the Z of the handle
 	Basket.width=0.45;
@@ -1378,7 +1390,7 @@ int main() {
 
 	//list of objects to pickup in the program ("shopping list")
 	std::list<Objects_class*> list_objects;
-	//list_objects.push_back(&Object1);
+	list_objects.push_back(&Object1);
 	list_objects.push_back(&Object2);
 	list_objects.push_back(&Object3);
 	
@@ -1418,10 +1430,12 @@ fTimerDidSleep = timer.waitForNextLoop();
 		object->_q= redis_client.getEigenMatrixJSON(OBJECT1_JOINT_ANGLES_KEY);
 		object2->_q= redis_client.getEigenMatrixJSON(OBJECT2_JOINT_ANGLES_KEY);
 		object3->_q= redis_client.getEigenMatrixJSON(OBJECT3_JOINT_ANGLES_KEY);
+		basket->_q= redis_client.getEigenMatrixJSON(BASKET_JOINT_ANGLES_KEY);
 		robot->updateModel();
 		object->updateModel();
 		object2->updateModel();
 		object3->updateModel();
+		basket->updateModel();
 		//update force sensor
 		Robot.force_finger_r=redis_client.getEigenMatrixJSON(EE_FORCE_KEY_r);
 		Robot.force_finger_l=redis_client.getEigenMatrixJSON(EE_FORCE_KEY_l);
@@ -1436,6 +1450,7 @@ fTimerDidSleep = timer.waitForNextLoop();
 		Object1.Update_states();
 		Object2.Update_states();
 		Object3.Update_states();
+		Basket.Update_states();
 
 
 
@@ -1488,16 +1503,6 @@ fTimerDidSleep = timer.waitForNextLoop();
 				control_torques.setZero();
 			}
 
-
-
-			// Position<<0.2,0.2,0.0;
-			// RobotController.Arm_Local_Position_Orientation_controller(Position,Robot.Rot_h_ee_basket(),0.1);
-			// RobotController.Gripper_controller(0);
-			// control_torques=RobotController.Return_torques();
-
-
-
-
 			break;
 		case Simulation_states::PICK_SHELF_OBJECTS:
 			switch (Robot.Current_state)
@@ -1530,10 +1535,27 @@ fTimerDidSleep = timer.waitForNextLoop();
 
 			break;
 		case Simulation_states::GO_TO_CONVEYOR:
-			control_torques.setZero();
+			//waypoints to go to conveyor
+
+			//when arrive, move to next state
+			arrived=true;
+			if(arrived){
+				Robot.set_robot_state(Robot_States::MOVING_ARM);
+				set_simulation_state(Simulation_states::PLACE_OBJECS_CONVEYOR);
+			}
+
+
+			control_torques.setZero();//delete when state is created
 			break;
 		case Simulation_states::PLACE_OBJECS_CONVEYOR:
-			control_torques.setZero();
+			
+			//if robot arm go to idle, finish simulation
+			if (Robot.Current_state==Robot_States::R_IDLE){
+				set_simulation_state(Simulation_states::IDLE);
+			}else{
+			control_torques=place_basket_in_conveyor(&RobotController , &Basket);
+			}
+			
 			break;
 		default:
 			control_torques.setZero();
