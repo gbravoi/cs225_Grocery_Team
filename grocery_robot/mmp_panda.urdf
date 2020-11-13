@@ -255,7 +255,7 @@
     <parent link = "ground_link" />
     <child link= "base_x"/>
     <axis xyz = "1 0 0" />
-    <limit effort="87" lower="-2.8973" upper="2.9873" velocity="2.1750" />
+    <limit effort="87" lower="-5" upper="5" velocity="2.1750" />
   </joint>
 
   <joint name = "base_prismatic_y" type = "prismatic">
@@ -263,7 +263,7 @@
     <parent link = "base_x" />
     <child link= "base_y"/>
     <axis xyz = "0 1 0" />
-    <limit effort="87" lower="-2.8973" upper="2.9873" velocity="2.1750" />
+    <limit effort="87" lower="-5" upper="5" velocity="2.1750" />
   </joint>
 
   <joint name = "base_revolute" type = "revolute">
@@ -271,7 +271,7 @@
     <parent link = "base_y" />
     <child link= "base_link"/>
     <axis xyz = "0 0 1" />
-    <limit effort="87" lower="-2.8973" upper="2.8973" velocity="2.1750" />
+    <limit effort="87" lower="-5" upper="5" velocity="2.1750" />
   </joint>
 <!--
   <joint name = "base_prismatic_link0" type = "prismatic">

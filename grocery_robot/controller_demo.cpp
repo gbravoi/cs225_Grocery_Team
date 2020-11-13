@@ -77,6 +77,7 @@ enum Robot_States {
 	APROACHING_OBJECT,
 	PICKING_OBJECT,
 	MOVING_BACKWARDS,
+	MOVING_TOP_CONVEYOR,
 	PLACING_OBJECT,
 	NAVIGATING};
 
@@ -159,6 +160,7 @@ class Shelf{
 		Vector3d origin_xyz;//position
 		Vector3d origin_rpy;//orientation
 		double depth; //depth of the shelf
+		double height; //height, used in the conveyor
 
 		//functions
 		Matrix3d get_eef_orientation();
@@ -965,9 +967,11 @@ VectorXd picking_object(Controller *RobotController, Matrix3d R_des, double V_ma
 			//if reached position
 			if ((target_pos-Robot->x_w).norm()<=0.02){
 				Robot->set_robot_state(next_state);
-				target_pos(0)=pos_front_shelf(0);//give target for moving backwards. do not change z
-				target_pos(1)=pos_front_shelf(1);
-				target_pos(3)=Robot->x_w(2);
+				if (next_state==Robot_States::MOVING_BACKWARDS){
+					target_pos(0)=pos_front_shelf(0);//give target for moving backwards. do not change z
+					target_pos(1)=pos_front_shelf(1);
+					target_pos(2)=Robot->x_w(2);
+				}
 				pick_shelf_objects_counter=0;//reset counter
 			}
 		}else{
@@ -1146,7 +1150,7 @@ VectorXd pick_shelf_objects(Controller *RobotController , Objects_class *Object)
 
 
 //************place basket on conveyor*****
-VectorXd place_basket_in_conveyor(Controller *RobotController , Objects_class *Basket){
+VectorXd place_basket_in_conveyor(Controller *RobotController , Objects_class *Basket, Shelf *Conveyor){
 	/**
 	* Function with a sub state machine to place basket on conveyor
 	**/
@@ -1156,7 +1160,11 @@ VectorXd place_basket_in_conveyor(Controller *RobotController , Objects_class *B
 	// double control_threshold=0.9;
 	double V_max=0.4;
 	Matrix3d R_des=Robot->Tranform_rot_base_to_world(R_down_ver_ee);
-	double up_distance=0.4;
+	double up_distance=Conveyor->height;//0.4;
+	Vector3d front_conveyor;
+	Vector3d conveyor_surface;
+	conveyor_surface=Conveyor->origin_xyz;
+	front_conveyor=Conveyor->position_front_shelf();
 
 	switch (Robot->Current_state)
 	{
@@ -1196,24 +1204,47 @@ VectorXd place_basket_in_conveyor(Controller *RobotController , Objects_class *B
 			 **/
 			control_torques=picking_object( RobotController, R_des, V_max,Robot_States::PLACING_OBJECT, up_distance);
 			break;
-		
-		case PLACING_OBJECT:
-			/**
-			 * placing object in the basket. Follow waypoints in base frame
-			 **/
-				//move to target
-			target_pos<<-1,-3,0.7;//replace this y the position of the surface of the conveyor
 
-			RobotController->Arm_World_Position_Orientation_controller(target_pos,R_des);//control arm and platform, need both to ensure position
-			RobotController->Gripper_controller(Robot->pick_up_force);//gripper open
+		case PLACING_OBJECT:
+			target_pos(0)=conveyor_surface(0);
+			target_pos(1)=conveyor_surface(1);
+			target_pos(2)=Conveyor->height+Basket->height+0.1;
+			RobotController->Arm_World_Position_Orientation_controller(target_pos, MatrixXd::Zero(3,3),0.1);//control arm and platform, need both to ensure position
+
+			RobotController->Gripper_controller(Robot->pick_up_force);//gripper close
 			control_torques=RobotController->Return_torques();
 
-			//if reached postion, move to orient
 			if ((target_pos-Robot->x_w).norm()<=control_threshold){
-				Robot->set_robot_state(Robot_States::R_IDLE);
-				control_torques.setZero();
+				Robot->set_robot_state(Robot_States::MOVING_BACKWARDS);
+				RobotController->Gripper_controller(0);//open
+				control_torques=RobotController->Return_torques();
+
 			}
+
 			break;
+		case MOVING_BACKWARDS:
+			/**wait finger open a move a little up, and the back
+			**/
+			RobotController->Arm_World_Position_Orientation_controller(target_pos, MatrixXd::Zero(3,3),V_max);
+			RobotController->Gripper_controller(0);//open
+			control_torques=RobotController->Return_torques();
+
+			target_pos(2)=Conveyor->height+Basket->height+0.5;
+			if ((target_pos-Robot->x_w).norm()<=control_threshold){
+				target_pos(0)=front_conveyor(0);
+				target_pos(1)=front_conveyor(1);
+				if ((target_pos-Robot->x_w).norm()<=control_threshold){
+					Robot->set_robot_state(Robot_States::R_IDLE);
+					control_torques.setZero();
+				}
+
+			}
+
+
+
+			break;
+
+		
 
 
 		default:
@@ -1336,6 +1367,14 @@ int main() {
 	Basket.width=0.45;
 	Basket.depth=0.3;
 
+
+	//Create conveyor as a shelf
+	Shelf Conveyor;
+	Conveyor.origin_xyz<<0.0 ,-4.0, 0.00;
+	Conveyor.origin_rpy<<0, 0 ,1.57079632679;
+	Conveyor.depth=0.5;
+	Conveyor.height=0.36;
+	
 
 
 	//create SHELFS. fill with info from worlf urdf
@@ -1536,16 +1575,20 @@ fTimerDidSleep = timer.waitForNextLoop();
 			break;
 		case Simulation_states::GO_TO_CONVEYOR:
 			//waypoints to go to conveyor
+			Position=Conveyor.position_front_shelf(0.1);
+			Position(2)=1.57079632679; //desired orientation
+			RobotController.Base_controller(Position,0.5);
+			control_torques=RobotController.Return_torques();
 
+
+			//cout<<"error"<<(Position-Robot.x_w).norm()<<endl;
 			//when arrive, move to next state
-			arrived=true;
+			arrived=(Position-Robot.x_w).norm()<=0.95;
 			if(arrived){
 				Robot.set_robot_state(Robot_States::MOVING_ARM);
 				set_simulation_state(Simulation_states::PLACE_OBJECS_CONVEYOR);
 			}
 
-
-			control_torques.setZero();//delete when state is created
 			break;
 		case Simulation_states::PLACE_OBJECS_CONVEYOR:
 			
@@ -1553,7 +1596,7 @@ fTimerDidSleep = timer.waitForNextLoop();
 			if (Robot.Current_state==Robot_States::R_IDLE){
 				set_simulation_state(Simulation_states::IDLE);
 			}else{
-			control_torques=place_basket_in_conveyor(&RobotController , &Basket);
+			control_torques=place_basket_in_conveyor(&RobotController , &Basket, &Conveyor);
 			}
 			
 			break;
