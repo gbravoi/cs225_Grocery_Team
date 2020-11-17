@@ -1,0 +1,137 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="jar_shelf_simulation">
+
+    <link name="link0">
+      <visual>
+        <geometry>
+            <mesh filename="../../../model/objects/jar_shelf.obj"/>
+        </geometry>
+      </visual>
+    </link>
+    <link name="link1">
+      <!--<visual>
+	        <origin xyz="0.0 -0.2315 0.09" rpy="0 0 0" />
+	        <geometry>
+	           <box size="1.0 0.463 0.02" />
+	        </geometry>
+	        <material name="material">
+		        <color rgba="0.1 0.1 0.1 1.0" />
+	        </material>
+	    </visual>-->
+      <collision>
+	        <origin xyz="0.0 -0.2315 0.09" rpy="0 0 0" />
+	        <geometry>
+	           <box size="1.0 0.463 0.02" />
+	        </geometry>
+	    </collision>
+    </link>
+    <link name="link2">
+      <!--<visual>
+	        <origin xyz="0.0 -0.2315 0.39" rpy="0 0 0" />
+	        <geometry>
+	           <box size="1.0 0.463 0.02" />
+	        </geometry>
+	        <material name="material">
+		        <color rgba="0.1 0.1 0.1 1.0" />
+	        </material>
+	    </visual>-->
+      <collision>
+	        <origin xyz="0.0 -0.2315 0.38" rpy="0 0 0" />
+	        <geometry>
+	           <box size="1.0 0.463 0.02" />
+	        </geometry>
+	    </collision>
+    </link>
+    <link name="link3">
+      <!--<visual>
+	        <origin xyz="0.0 -0.2315 0.68" rpy="0 0 0" />
+	        <geometry>
+	           <box size="1.0 0.463 0.02" />
+	        </geometry>
+	        <material name="material">
+		        <color rgba="0.1 0.1 0.1 1.0" />
+	        </material>
+	    </visual>-->
+      <collision>
+	        <origin xyz="0.0 -0.2315 0.66" rpy="0 0 0" />
+	        <geometry>
+	           <box size="1.0 0.463 0.02" />
+	        </geometry>
+	    </collision>
+    </link>
+      <link name="link4">
+     <!-- <visual>
+	        <origin xyz="0.0 -0.2315 0.97" rpy="0 0 0" />
+	        <geometry>
+	           <box size="1.0 0.463 0.02" />
+	        </geometry>
+	        <material name="material">
+		        <color rgba="0.1 0.1 0.1 1.0" />
+	        </material>
+	    </visual>-->
+      <collision>
+	        <origin xyz="0.0 -0.2315 0.97" rpy="0 0 0" />
+	        <geometry>
+	           <box size="1.0 0.463 0.02" />
+	        </geometry>
+	    </collision>
+    </link>
+    <link name="link5">
+    <!--<visual>
+	        <origin xyz="0.0 -0.2315 1.25" rpy="0 0 0" />
+	        <geometry>
+	           <box size="1.0 0.463 0.02" />
+	        </geometry>
+	        <material name="material">
+		        <color rgba="0.1 0.1 0.1 1.0" />
+	        </material>
+	    </visual>-->
+      <collision>
+	        <origin xyz="0.0 -0.2315 1.25" rpy="0 0 0" />
+	        <geometry>
+	           <box size="1.0 0.463 0.02" />
+	        </geometry>
+	    </collision>
+    </link>
+
+    
+    <joint name="joint1" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="link0"/>
+      <child link="link1"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="21.3" lower="-100" upper="100" velocity="21.3"/>
+    </joint>
+    <joint name="joint2" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="link1"/>
+      <child link="link2"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="21.3" lower="-100" upper="100" velocity="21.3"/>
+    </joint>
+    <joint name="joint3" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="link2"/>
+      <child link="link3"/>
+      <axis xyz="1 0 0"/>
+      <limit effort="21.3" lower="-100" upper="100" velocity="21.3"/>
+    </joint>
+    <joint name="joint4" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="link3"/>
+      <child link="link4"/>
+        <axis xyz="1 0 0"/>
+      <limit effort="21.3" lower="0" upper="6.28" velocity="21.3"/>
+    </joint>
+    <joint name="joint5" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="link4"/>
+      <child link="link5"/>
+        <axis xyz="0 1 0"/>
+      <limit effort="21.3" lower="0" upper="6.28" velocity="21.3"/>
+    </joint>
+
+
+</robot>
+
+</xml>

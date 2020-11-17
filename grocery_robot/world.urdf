@@ -66,91 +66,156 @@
 	<!--first group-->
 
 	<!--positon and orientation of the shelf need to be includede in controller-->
-	<robot name="shelf1">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="1.3 -0.8 0.0" rpy="0 0 0" />
-	</robot>
+	<static_object name="shelf1">
+		<origin xyz="1.3 -0.8 0.0" rpy="1.57079632679 0 0" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/pasta_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
 	<robot name="shelf2">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="2.35 -0.8 0.0" rpy="0 0 0" />
+		<model dir="./resources" path="pasta_shelf_simulation.urdf" name="pasta_shelf_simulation" />
+		<origin xyz="2.35 -0.8 0.0" rpy="1.57079632679 0 0" />
 	</robot>
 
-	<robot name="shelf3">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="1.3 -1.75 0.0" rpy="0 0 3.14159265358" />
-	</robot>
+	<static_object name="shelf3">
+		<origin xyz="1.3 -1.75 0.0" rpy="1.57079632679 0 3.14159265358" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/pasta_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
-	<robot name="shelf4">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="2.35 -1.75 0.0" rpy="0 0 3.14159265358" />
-	</robot>
+	<static_object name="shelf4">
+		<origin xyz="2.35 -1.75 0.0" rpy="1.57079632679 0 3.14159265358" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/pasta_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
 	<!--second group-->
 
-	<robot name="shelf5">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="-1.3 -0.8 0.0" rpy="0 0 0" />
-	</robot>
+	<static_object name="shelf5">
+		<origin xyz="-1.3 -0.8 0.0" rpy="1.57079632679 0 0" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/milk_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
-	<robot name="shelf6">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="-2.35 -0.8 0.0" rpy="0 0 0" />
-	</robot>
+	<static_object name="shelf6">
+		<origin xyz="-2.35 -0.8 0.0" rpy="1.57079632679 0 0" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/milk_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
-	<robot name="shelf7">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="-1.3 -1.75 0.0" rpy="0 0 3.14159265358" />
-	</robot>
+	<static_object name="shelf7">
+		<origin xyz="-1.3 -1.75 0.0" rpy="1.57079632679 0 3.14159265358" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/milk_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
 	<robot name="shelf8">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="-2.35 -1.75 0.0" rpy="0 0 3.14159265358" />
+		<model dir="./resources" path="milk_shelf_simulation.urdf" name="milk_shelf_simulation" />
+		<origin xyz="-2.35 -1.75 0.0" rpy="1.57079632679 0 3.14159265358" />
 	</robot>
 
 	<!--third group-->
 
-	<robot name="shelf9">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="1.3 0.8 0.0" rpy="0 0 3.14159265358" />
-	</robot>
+	<static_object name="shelf9">
+		<origin xyz="1.3 0.8 0.0" rpy="1.57079632679 0 3.14159265358" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/milk_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
-	<robot name="shelf10">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="2.35 0.8 0.0" rpy="0 0 3.14159265358" />
-	</robot>
+	<static_object name="shelf10">
+		<origin xyz="2.35 0.8 0.0" rpy="1.57079632679 0 3.14159265358" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/milk_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
-	<robot name="shelf11">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="1.3 1.75 0.0" rpy="0 0 0" />
-	</robot>
+	<static_object name="shelf11">
+		<origin xyz="1.3 1.75 0.0" rpy="1.57079632679 0 0" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/milk_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
-	<robot name="shelf12">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="2.35 1.75 0.0" rpy="0 0 0" />
-	</robot>
+	<static_object name="shelf12">
+		<origin xyz="2.35 1.75 0.0" rpy="1.57079632679 0 0" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/milk_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
 	<!--fourth group-->
 
 	<robot name="shelf13">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="-1.3 0.8 0.0" rpy="0 0 3.14159265358" />
+		<model dir="./resources" path="jar_shelf_simulation.urdf" name="jar_shelf_simulation" />
+		<origin xyz="-1.3 0.8 0.0" rpy="1.57079632679 0 3.14159265358" />
 	</robot>
 
-	<robot name="shelf14">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="-2.35 0.8 0.0" rpy="0 0 3.14159265358" />
-	</robot>
+	<static_object name="shelf14">
+		<origin xyz="-2.35 0.8 0.0" rpy="1.57079632679 0 3.14159265358" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/jar_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
-	<robot name="shelf15">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="-1.3 1.75 0.0" rpy="0 0 0" />
-	</robot>
+	<static_object name="shelf15">
+		<origin xyz="-1.3 1.75 0.0" rpy="1.57079632679 0 0" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/jar_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
-	<robot name="shelf16">
-		<model dir="./resources" path="shelf.urdf" name="shelf" />
-		<origin xyz="-2.35 1.75 0.0" rpy="0 0 0" />
-	</robot>
+	<static_object name="shelf16">
+		<origin xyz="-2.35 1.75 0.0" rpy="1.57079632679 0 0" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/jar_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
 <!-- Walls -->
 <static_object name="Wall1">
