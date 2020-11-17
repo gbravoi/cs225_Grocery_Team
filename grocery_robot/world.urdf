@@ -73,7 +73,15 @@
 	<!--first group-->
 
 	<!--positon and orientation of the shelf need to be includede in controller-->
-
+		<static_object name="shelf1">
+		<origin xyz="1.3 -0.8 0.0" rpy="1.57079632679 0 0" />
+		<visual>
+				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+				<geometry>
+						<mesh filename="./resources/../../../model/objects/pasta_shelf.obj" scale="1 1 1"/>/>
+				</geometry>
+		</visual>
+	</static_object>
 
 	<robot name="shelf2">
 		<model dir="./resources" path="pasta_shelf_simulation.urdf" name="pasta_shelf_simulation" />
