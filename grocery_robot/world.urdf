@@ -9,21 +9,26 @@
 
 
 		<!--if change position on tipe of the object, it need to change the ofset,dimensions and shelf in the controller and simviz-->
+		<robot name="jar1"><!--IN SHELF 13-->
+		<model dir="./resources" path="jar.urdf" name="jar1" />
+		<origin xyz="-1.3 0.9 1.0" rpy="0 0 0" />
+		</robot>
+		
+		<robot name="milk"><!--IN SHELF 8-->
+		<model dir="./resources" path="milk.urdf" name="milk" />
+		<origin xyz="-2.35 -1.65 0.49" rpy="0 0 0" />
+		</robot>
+
+
 		<robot name="pasta"><!--IN SHELF 2-->
 		<model dir="./resources" path="pasta.urdf" name="pasta" />
 		<origin xyz="2.35 -0.9 0.7" rpy="0 0 0" />
 		<!--<origin xyz="0.0 -0.65 0.2" rpy="0 0 0" />-->
 		</robot>
 
-		<robot name="jar1"><!--IN SHELF 13-->
-		<model dir="./resources" path="jar.urdf" name="jar1" />
-		<origin xyz="-1.3 0.9 1.0" rpy="0 0 0" />
-		</robot>
 
-		<robot name="milk"><!--IN SHELF 8-->
-		<model dir="./resources" path="milk.urdf" name="milk" />
-		<origin xyz="-2.35 -1.65 0.49" rpy="0 0 0" />
-		</robot>
+
+
 
 
 
@@ -68,19 +73,11 @@
 	<!--first group-->
 
 	<!--positon and orientation of the shelf need to be includede in controller-->
-	<static_object name="shelf1">
-		<origin xyz="1.3 -0.8 0.0" rpy="1.57079632679 0 0" />
-		<visual>
-				<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
-				<geometry>
-						<mesh filename="./resources/../../../model/objects/pasta_shelf.obj" scale="1 1 1"/>/>
-				</geometry>
-		</visual>
-	</static_object>
+
 
 	<robot name="shelf2">
 		<model dir="./resources" path="pasta_shelf_simulation.urdf" name="pasta_shelf_simulation" />
-		<origin xyz="2.35 -0.8 0.0" rpy="1.57079632679 0 0" />
+		<origin xyz="2.35 -0.8 0.0" rpy="0 0 0" />
 	</robot>
 
 	<static_object name="shelf3">
@@ -137,7 +134,7 @@
 
 	<robot name="shelf8">
 		<model dir="./resources" path="milk_shelf_simulation.urdf" name="milk_shelf_simulation" />
-		<origin xyz="-2.35 -1.75 0.0" rpy="1.57079632679 0 3.14159265358" />
+		<origin xyz="-2.35 -1.75 0.0" rpy="0 0 3.14159265358" />
 	</robot>
 
 	<!--third group-->
@@ -186,7 +183,7 @@
 
 	<robot name="shelf13">
 		<model dir="./resources" path="jar_shelf_simulation.urdf" name="jar_shelf_simulation" />
-		<origin xyz="-1.3 0.8 0.0" rpy="1.57079632679 0 3.14159265358" />
+		<origin xyz="-1.3 0.8 0.0" rpy="0 0 3.14159265358" />
 	</robot>
 
 	<static_object name="shelf14">

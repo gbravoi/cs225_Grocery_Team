@@ -32,8 +32,8 @@ double sat(double x) {
 // Location of URDF files specifying world and robot information
 const string robot_file = "./resources/mmp_panda.urdf";
 const string object_file = "./resources/jar.urdf";
-const string object2_file = "./resources/jar.urdf";
-const string object3_file = "./resources/jar.urdf";
+const string object2_file = "./resources/milk.urdf";
+const string object3_file = "./resources/pasta.urdf";
 const string basket_file = "./resources/basket.urdf";
 const string robot_name = "mmp_panda";
 
@@ -1402,27 +1402,27 @@ int main() {
 	Object1.height=0.128;
 	Object1.width=0.0888;
 	Object1.depth=0.0888;
-	Object1.obj_offset<<2.35 ,-0.9 ,0.7+Object1.height/2;
+	Object1.obj_offset<<-1.3, 0.9 ,1.0+Object1.height/2;
 	Object1.shelf=Shelf2;
 
 	//Start OBJECT2 JAR2
 	Objects_class Object2;
-	Object2.name="jar2";
+	Object2.name="milk";
 	Object2.SAI2_object=object2;
-	Object2.height=0.128;
-	Object2.width=0.0888;
-	Object2.depth=0.0888;
-	Object2.obj_offset<<-1.3, 0.9 ,1.0+Object2.height/2;
+	Object2.height=0.1825;
+	Object2.width=0.0702;
+	Object2.depth=0.0702;
+	Object2.obj_offset<<-2.35 ,-1.65, 0.49+Object2.height/2;
 	Object2.shelf=Shelf13;
 
 	//Start OBJECT3 JAR3
 	Objects_class Object3;
-	Object3.name="jar3";
+	Object3.name="pasta";
 	Object3.SAI2_object=object3;
-	Object3.height=0.128;
-	Object3.width=0.0888;
-	Object3.depth=0.0888;
-	Object3.obj_offset<<-2.35, -1.65, 0.49+Object3.height/2;
+	Object3.height=0.2;
+	Object3.width=0.15;
+	Object3.depth=0.07;
+	Object3.obj_offset<<2.35, -0.9 ,0.7+Object3.height/2;
 	Object3.shelf=Shelf8;
 
 
