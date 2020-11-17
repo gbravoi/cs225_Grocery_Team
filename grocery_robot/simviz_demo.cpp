@@ -120,7 +120,7 @@ int main() {
 	auto graphics = new Sai2Graphics::Sai2Graphics(world_file, true);
 	Eigen::Vector3d camera_pos, camera_lookat, camera_vertical;
 	graphics->getCameraPose(camera_name, camera_pos, camera_vertical, camera_lookat);
-	graphics->showLinkFrame(true, robot_name, ee_link_name, 0.18);  // robot link 7 frame
+	//graphics->showLinkFrame(true, robot_name, ee_link_name, 0.18);  // robot link 7 frame
 	// graphics->showLinkFrame(true, obj_name, "link6", 0.15);  // jar1 frame
 	// graphics->showLinkFrame(true, obj2_name, "link6", 0.15);  // jar1 frame
 	// graphics->showLinkFrame(true, obj3_name, "link6", 0.15);  // jar1 frame
@@ -342,7 +342,7 @@ int main() {
 			}
 		}
 
-		// //UNCOMMENT TO FIND DESIRED CAMARA POSITION.
+		// //UNCOMMENT TO FIND DESIRED CAMERA POSITION.
 		// cout<<"camera_pos"<<camera_pos.transpose()<<endl;
 		// cout<<"camera_vertical"<<camera_vertical.transpose()<<endl;
 		// cout<<"camera_lookat"<<camera_lookat.transpose()<<endl;

@@ -11,7 +11,7 @@
 		<!--if change position on tipe of the object, it need to change the ofset,dimensions and shelf in the controller and simviz-->
 		<robot name="jar1"><!--IN SHELF 13-->
 		<model dir="./resources" path="jar.urdf" name="jar1" />
-		<origin xyz="-1.3 0.9 1.0" rpy="0 0 0" />
+		<origin xyz="-1.7 0.9 1.0" rpy="0 0 0" />
 		</robot>
 
 		<robot name="milk"><!--IN SHELF 8-->
@@ -436,22 +436,47 @@
 	</light>
 
 	<camera name="camera_fixed">
-		<!--view center all-->
+		<!--view center all/sheft pasta-->
  		<!-- <position xyz="5.16502 ,0.323767, 0.826771" />
 		<vertical xyz="0.0 0 1.0" />
 		<lookat xyz="4.18688, 0.121413, 0.778789" />  -->
+
 		<!-- robot top view when is 0,0 -->
 	 	<!-- <position xyz="-0.166922 -0.122112   1.79856" />
 		<vertical xyz="-0.0482529 0.00598945   0.998817" />
 		<lookat xyz="-0.00747756   -0.124966    0.811362" />  -->
+
+		<!--view sheft JAR-->
+		<!-- <position xyz="0.690854 0.409082  0.88082" />
+		<vertical xyz="0.986826 0.0282385  0.159303" />
+		<lookat xyz="-0.300757  0.381613  0.754516" />  -->
+
+		<!--view sheft MILK-->
+		<!-- <position xyz="-0.812641  -3.25468  0.877701" />
+		<vertical xyz="-0.126958 0.0235324  0.991629" />
+		<lookat xyz="-1.65917 -2.75149 0.703945" />  -->
+
+		<!--view sheft CCONVEYOR-->
+		<!-- <position xyz="-0.298267  -1.96351  0.811887" />
+		<vertical xyz="-0.172054 0.0502653  0.983804" />
+		<lookat xyz="-0.423911  -2.94673  0.679634" />  -->
+
+
+		<!--view sheft TOP VIEW-->
+		<position xyz="0.222243 -0.202036   5.90833" />
+		<vertical xyz="-0.194334 -0.106335  0.975155" />
+		<lookat xyz="0.222238 -0.206191   4.90834" /> 
+
+
 		<!--0,0 side-->
 		<!-- <position xyz="0.453596 ,-1.86617, 0.892539" />
 		<vertical xyz="-0.0482529, 0.00598945 ,  0.998817" />
 		<lookat xyz="0.204639 ,-0.904431,  0.778148" />  -->
-		<!--conveyor-->
- 		<position xyz="0.671837 -2.47371 0.810171" />
+
+		<!--center-->
+ 		<!-- <position xyz="0.671837 -2.47371 0.810171" />
 		<vertical xyz="-0.0482529 0.00598945   0.998817" />
-		<lookat xyz="-0.0482529 0.00598945   0.998817" />
+		<lookat xyz="-0.0482529 0.00598945   0.998817" /> -->
 	</camera>
 
 </world>

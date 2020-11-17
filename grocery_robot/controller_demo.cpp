@@ -421,7 +421,7 @@ void Grocery_Robot::generate_to_basket_waypoints(){
 
 	//basket frame
 	home_to_basket_waypoints.col(0)<<0.25,0,0.7;//POSITION OF THE TOP OF THE BASKET
-	home_to_basket_waypoints.col(1)<<0.25,0,0.55;//POSITION OF THE TOP OF THE BASKET
+	home_to_basket_waypoints.col(1)<<0.25,0,0.6;//POSITION OF THE TOP OF THE BASKET
 };
 
 void Grocery_Robot::set_robot_state(Robot_States robot_state){
@@ -1402,7 +1402,7 @@ int main() {
 	Object1.height=0.128;
 	Object1.width=0.0888;
 	Object1.depth=0.0888;
-	Object1.obj_offset<<-1.3, 0.9 ,1.0+Object1.height/2;
+	Object1.obj_offset<<-1.7, 0.9 ,1.0+Object1.height/2;
 	Object1.shelf=Shelf13;
 
 	//Start OBJECT2 MILK
