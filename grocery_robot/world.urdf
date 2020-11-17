@@ -413,7 +413,7 @@
 	    	<!-- <origin xyz="0.0 0.0 0.0" rpy="0 0 0" /> -->
 	        <origin xyz="0.0 0.0 -0.0001" rpy="0 0 0" />
 	        <geometry>
-	            <!-- <mesh filename="./resources/../../../model/test_objects/meshes/visual/ground.obj" scale="1.0 1.0 1.0"/> -->
+	            <mesh filename="./resources/../../../model/objects/floor.obj" scale="1.0 1.0 1.0"/>
 	            <box size="100 100 0.0002" />
 	        </geometry>
 	        <material name="material">
@@ -463,9 +463,9 @@
 
 
 		<!--view sheft TOP VIEW-->
-		<position xyz="0.222243 -0.202036   5.90833" />
+		<!-- <position xyz="0.222243 -0.202036   5.90833" />
 		<vertical xyz="-0.194334 -0.106335  0.975155" />
-		<lookat xyz="0.222238 -0.206191   4.90834" /> 
+		<lookat xyz="0.222238 -0.206191   4.90834" />  -->
 
 
 		<!--0,0 side-->
@@ -474,9 +474,9 @@
 		<lookat xyz="0.204639 ,-0.904431,  0.778148" />  -->
 
 		<!--center-->
- 		<!-- <position xyz="0.671837 -2.47371 0.810171" />
+ 		<position xyz="0.671837 -2.47371 0.810171" />
 		<vertical xyz="-0.0482529 0.00598945   0.998817" />
-		<lookat xyz="-0.0482529 0.00598945   0.998817" /> -->
+		<lookat xyz="-0.0482529 0.00598945   0.998817" />
 	</camera>
 
 </world>
