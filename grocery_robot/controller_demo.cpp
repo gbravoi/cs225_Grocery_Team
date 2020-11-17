@@ -1403,9 +1403,9 @@ int main() {
 	Object1.width=0.0888;
 	Object1.depth=0.0888;
 	Object1.obj_offset<<-1.3, 0.9 ,1.0+Object1.height/2;
-	Object1.shelf=Shelf2;
+	Object1.shelf=Shelf13;
 
-	//Start OBJECT2 JAR2
+	//Start OBJECT2 MILK
 	Objects_class Object2;
 	Object2.name="milk";
 	Object2.SAI2_object=object2;
@@ -1413,25 +1413,26 @@ int main() {
 	Object2.width=0.0702;
 	Object2.depth=0.0702;
 	Object2.obj_offset<<-2.35 ,-1.65, 0.49+Object2.height/2;
-	Object2.shelf=Shelf13;
+	Object2.shelf=Shelf8;
 
-	//Start OBJECT3 JAR3
+	//Start OBJECT3 PASTA
 	Objects_class Object3;
 	Object3.name="pasta";
 	Object3.SAI2_object=object3;
 	Object3.height=0.2;
-	Object3.width=0.15;
-	Object3.depth=0.07;
+	Object3.width=0.07;
+	Object3.depth=0.15;
 	Object3.obj_offset<<2.35, -0.9 ,0.7+Object3.height/2;
-	Object3.shelf=Shelf8;
+	Object3.shelf=Shelf2;
 
 
 
 	//list of objects to pickup in the program ("shopping list")
 	std::list<Objects_class*> list_objects;
+	list_objects.push_back(&Object3);
 	list_objects.push_back(&Object1);
 	list_objects.push_back(&Object2);
-	list_objects.push_back(&Object3);
+
 	
 
 
