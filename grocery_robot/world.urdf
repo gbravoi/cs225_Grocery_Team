@@ -382,7 +382,7 @@
 <static_object name="Wall4">
 	<!-- <origin xyz="0.0 0.0 0.0" rpy="0 0 0" /> -->
 		<visual>
-				<origin xyz="0.0 -7.5 0.0" rpy="1.57079632679 0 0" />
+				<origin xyz="0.0 -6.5 2.5" rpy="-1.57079632679 0 0" />
 				<geometry>
 						<mesh filename="./resources/../../../model/objects/x_wall.obj" scale="1 0.5 1"/>
 				</geometry>
