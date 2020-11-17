@@ -31,8 +31,8 @@ const string obj_name = "jar1";
 const string obj_file = "./resources/jar.urdf";
 const string obj2_name = "milk";
 const string obj2_file = "./resources/milk.urdf";
-const string obj3_name = "jar3";
-const string obj3_file = "./resources/jar.urdf";
+const string obj3_name = "pasta";
+const string obj3_file = "./resources/pasta.urdf";
 const string basket_name = "basket";
 const string basket_file = "./resources/basket.urdf";
 

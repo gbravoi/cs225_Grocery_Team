@@ -24,6 +24,8 @@ FILE(COPY ${PROJECT_SOURCE_DIR}/model/objects/shelf.urdf DESTINATION ${APP_RESOU
 FILE(COPY ${PROJECT_SOURCE_DIR}/model/objects/shelf_collision.obj DESTINATION ${APP_RESOURCE_DIR})
 FILE(COPY ${PROJECT_SOURCE_DIR}/model/objects/grocery_shelf.obj DESTINATION ${APP_RESOURCE_DIR})
 
+FILE(COPY ${PROJECT_SOURCE_DIR}/model/objects/pasta.urdf DESTINATION ${APP_RESOURCE_DIR})
+FILE(COPY ${PROJECT_SOURCE_DIR}/model/objects/pasta.obj DESTINATION ${APP_RESOURCE_DIR})
 
 FILE(COPY ${PROJECT_SOURCE_DIR}/model/objects/jar_shelf_simulation.urdf DESTINATION ${APP_RESOURCE_DIR})
 FILE(COPY ${PROJECT_SOURCE_DIR}/model/objects/milk_shelf_simulation.urdf DESTINATION ${APP_RESOURCE_DIR})

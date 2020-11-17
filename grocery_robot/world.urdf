@@ -7,23 +7,25 @@
 		<origin xyz="0.0 0.0 0.15" rpy="0 0 0" />
 	</robot>
 
-	<!--if change position on tipe of the object, it need to change the ofset,dimensions and shelf in the controller and simviz-->
-	<robot name="jar1"><!--IN SHELF 2-->
-		<model dir="./resources" path="jar.urdf" name="jar" />
+
+		<!--if change position on tipe of the object, it need to change the ofset,dimensions and shelf in the controller and simviz-->
+		<robot name="pasta"><!--IN SHELF 2-->
+		<model dir="./resources" path="pasta.urdf" name="pasta" />
 		<origin xyz="2.35 -0.9 0.7" rpy="0 0 0" />
 		<!--<origin xyz="0.0 -0.65 0.2" rpy="0 0 0" />-->
-	</robot>
+		</robot>
 
-
-	<robot name="milk"><!--IN SHELF 13-->
-		<model dir="./resources" path="milk.urdf" name="milk" />
+		<robot name="jar1"><!--IN SHELF 13-->
+		<model dir="./resources" path="jar.urdf" name="jar1" />
 		<origin xyz="-1.3 0.9 1.0" rpy="0 0 0" />
-	</robot>
+		</robot>
 
-	<robot name="jar3"><!--IN SHELF 8-->
-		<model dir="./resources" path="jar.urdf" name="jar" />
+		<robot name="milk"><!--IN SHELF 8-->
+		<model dir="./resources" path="milk.urdf" name="milk" />
 		<origin xyz="-2.35 -1.65 0.49" rpy="0 0 0" />
-	</robot>
+		</robot>
+
+
 
 
 	<!--change of basket position, make sure to change in controller.cpp-->

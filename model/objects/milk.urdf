@@ -53,14 +53,14 @@
         <!-- <origin xyz="0 0 0" rpy="0 0 0" /> -->
         <origin xyz="0 0 0" rpy="1.57079632679 0 0" />
         <geometry>
-            <!-- <mesh filename="../../../model/objects/milk.obj"/> -->
-           <box size="0.0702 0.0702 0.1825" />
+            <mesh filename="../../../model/objects/milk.obj"/>
+           <box size="0.0702 0.1825 0.0702 " />
         </geometry>
       </visual>
       <collision>
         <origin xyz="0 0 0.09125" rpy="1.57079632679 0 0" />
         <geometry>
-          <box size="0.0702 0.0702 0.1825" />
+          <box size="0.0702 0.1825 0.0702 " />
         </geometry>
       </collision>
     </link>
