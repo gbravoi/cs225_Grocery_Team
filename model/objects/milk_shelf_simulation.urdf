@@ -94,6 +94,14 @@
 	        </geometry>
 	    </collision>
     </link>
+    <link name="empty">
+      <visual>
+	  <origin xyz="0.0 0 0" rpy="1.57079632679 0 0" />
+        <geometry>
+            <mesh filename="../../../model/objects/empty_shelf.obj"/>
+        </geometry>
+      </visual>
+    </link>
 
     
     <joint name="joint1" type="fixed">
@@ -128,6 +136,13 @@
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <parent link="link4"/>
       <child link="link5"/>
+        <axis xyz="0 1 0"/>
+      <limit effort="21.3" lower="0" upper="6.28" velocity="21.3"/>
+    </joint>
+    <joint name="joint6" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="link5"/>
+      <child link="empty"/>
         <axis xyz="0 1 0"/>
       <limit effort="21.3" lower="0" upper="6.28" velocity="21.3"/>
     </joint>

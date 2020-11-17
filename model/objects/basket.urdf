@@ -55,7 +55,7 @@
         <!-- <origin xyz="0 0 0" rpy="0 0 0" /> -->
         <origin xyz="0 0 0" rpy="1.57079632679 0 1.57079632679" />
         <geometry>
-            <mesh filename="../../../model/objects/basket.obj"/>
+           <mesh filename="../../../model/objects/basket.obj"/>
            <box size="0.3 0.5 0.014" />
         </geometry>
       </visual>
