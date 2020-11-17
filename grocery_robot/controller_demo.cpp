@@ -1412,7 +1412,7 @@ int main() {
 	Object2.height=0.1825;
 	Object2.width=0.0702;
 	Object2.depth=0.0702;
-	Object2.obj_offset<<-2.35 ,-1.65, 0.49+Object2.height/2;
+	Object2.obj_offset<<-2.5 ,-1.65, 0.49+Object2.height/2;
 	Object2.shelf=Shelf8;
 
 	//Start OBJECT3 PASTA
@@ -1422,7 +1422,7 @@ int main() {
 	Object3.height=0.2;
 	Object3.width=0.07;
 	Object3.depth=0.15;
-	Object3.obj_offset<<2.35, -0.9 ,0.7+Object3.height/2;
+	Object3.obj_offset<<2.07,-0.9, 0.7+Object3.height/2;
 	Object3.shelf=Shelf2;
 
 

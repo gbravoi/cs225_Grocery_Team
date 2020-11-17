@@ -10,7 +10,7 @@
       </visual>
     </link>
     <link name="link1">
-      <visual>
+      <!-- <visual>
 	        <origin xyz="0.0 -0.2315 0.09" rpy="0 0 0" />
 	        <geometry>
 	           <box size="1.0 0.463 0.02" />
@@ -18,7 +18,7 @@
 	        <material name="material">
 		        <color rgba="0.1 0.1 0.1 1.0" />
 	        </material>
-	    </visual>
+	    </visual> -->
       <collision>
 	        <origin xyz="0.0 -0.2315 0.09" rpy="0 0 0" />
 	        <geometry>

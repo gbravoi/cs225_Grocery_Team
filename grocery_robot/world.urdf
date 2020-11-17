@@ -13,16 +13,16 @@
 		<model dir="./resources" path="jar.urdf" name="jar1" />
 		<origin xyz="-1.3 0.9 1.0" rpy="0 0 0" />
 		</robot>
-		
+
 		<robot name="milk"><!--IN SHELF 8-->
 		<model dir="./resources" path="milk.urdf" name="milk" />
-		<origin xyz="-2.35 -1.65 0.49" rpy="0 0 0" />
+		<origin xyz="-2.5 -1.65 0.49" rpy="0 0 0" />
 		</robot>
 
 
 		<robot name="pasta"><!--IN SHELF 2-->
 		<model dir="./resources" path="pasta.urdf" name="pasta" />
-		<origin xyz="2.35 -0.9 0.7" rpy="0 0 0" />
+		<origin xyz="2.07 -0.9 0.7" rpy="0 0 0" />
 		<!--<origin xyz="0.0 -0.65 0.2" rpy="0 0 0" />-->
 		</robot>
 
