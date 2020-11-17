@@ -29,8 +29,8 @@ const string ee_link_name = "link7";
 //MOD FOR SEVERAL OBJECT
 const string obj_name = "jar1";
 const string obj_file = "./resources/jar.urdf";
-const string obj2_name = "jar2";
-const string obj2_file = "./resources/jar.urdf";
+const string obj2_name = "milk";
+const string obj2_file = "./resources/milk.urdf";
 const string obj3_name = "jar3";
 const string obj3_file = "./resources/jar.urdf";
 const string basket_name = "basket";

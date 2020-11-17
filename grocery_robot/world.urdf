@@ -15,8 +15,8 @@
 	</robot>
 
 
-	<robot name="jar2"><!--IN SHELF 13-->
-		<model dir="./resources" path="jar.urdf" name="jar" />
+	<robot name="milk"><!--IN SHELF 13-->
+		<model dir="./resources" path="milk.urdf" name="milk" />
 		<origin xyz="-1.3 0.9 1.0" rpy="0 0 0" />
 	</robot>
 
